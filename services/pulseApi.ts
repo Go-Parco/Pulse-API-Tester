@@ -54,7 +54,7 @@ export async function extractFromPdf(
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
-				"x-api-key": process.env.NEXT_PUBLIC_PULSE_API_KEY!,
+				"x-api-key": process.env.PULSE_API_KEY!,
 			},
 			body: JSON.stringify({
 				"file-url": fileUrl,
@@ -91,7 +91,7 @@ export const pollExtractionStatus = async (
 		const response = await fetch(`https://api.runpulse.com/job/${jobId}`, {
 			method: "GET",
 			headers: {
-				"x-api-key": process.env.NEXT_PUBLIC_PULSE_API_KEY!,
+				"x-api-key": process.env.PULSE_API_KEY!,
 			},
 		})
 
