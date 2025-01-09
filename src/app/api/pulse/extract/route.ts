@@ -2,8 +2,8 @@ import { NextResponse } from "next/server"
 import { PULSE_API_URL } from "../config"
 import type { PulseConfig, PulseExtractResponse } from "../config"
 
-// Set timeout to 2 minutes
-const TIMEOUT = 120000
+// Set timeout to 50 seconds (leaving buffer for Vercel's 60s limit)
+const TIMEOUT = 55000
 
 const fetchWithTimeout = async (url: string, options: RequestInit) => {
 	const controller = new AbortController()
@@ -94,4 +94,4 @@ export async function POST(request: Request) {
 }
 
 export const dynamic = "force-dynamic"
-export const maxDuration = 120
+export const maxDuration = 60
