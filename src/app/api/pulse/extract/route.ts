@@ -2,10 +2,34 @@ import { NextResponse } from "next/server"
 import { PULSE_API_URL } from "../config"
 import type { PulseConfig, PulseExtractResponse } from "../config"
 
+// Set timeout to 2 minutes
+const TIMEOUT = 120000
+
+const fetchWithTimeout = async (url: string, options: RequestInit) => {
+	const controller = new AbortController()
+	const id = setTimeout(() => controller.abort(), TIMEOUT)
+
+	try {
+		const response = await fetch(url, {
+			...options,
+			signal: controller.signal,
+		})
+		clearTimeout(id)
+		return response
+	} catch (error) {
+		clearTimeout(id)
+		throw error
+	}
+}
+
 export async function POST(request: Request) {
 	try {
 		const { fileUrl, method } = await request.json()
 		const apiKey = process.env.PULSE_API_KEY
+
+		if (!apiKey) {
+			throw new Error("PULSE_API_KEY is not configured")
+		}
 
 		console.log("Request details:", {
 			url: `${PULSE_API_URL}/extract`,
@@ -17,10 +41,10 @@ export async function POST(request: Request) {
 			},
 		})
 
-		const response = await fetch(`${PULSE_API_URL}/extract`, {
+		const response = await fetchWithTimeout(`${PULSE_API_URL}/extract`, {
 			method: "POST",
 			headers: {
-				"x-api-key": apiKey!,
+				"x-api-key": apiKey,
 				"Content-Type": "application/json",
 			},
 			body: JSON.stringify({
@@ -30,14 +54,21 @@ export async function POST(request: Request) {
 			}),
 		})
 
-		const data = await response.json()
-		console.log("Raw API Response:", data)
-
 		if (!response.ok) {
+			const errorData = await response.json().catch(() => ({}))
+			console.error("Pulse API Error:", {
+				status: response.status,
+				statusText: response.statusText,
+				error: errorData,
+			})
 			throw new Error(
-				data.error || `HTTP error! status: ${response.status}`
+				errorData.error ||
+					`HTTP error! status: ${response.status} - ${response.statusText}`
 			)
 		}
+
+		const data = await response.json()
+		console.log("Raw API Response:", data)
 
 		// Transform the response to match our expected format
 		const result: PulseExtractResponse = {
@@ -53,8 +84,14 @@ export async function POST(request: Request) {
 	} catch (error: any) {
 		console.error("Extraction error:", error)
 		return NextResponse.json(
-			{ error: error.message || "Failed to extract PDF" },
-			{ status: 500 }
+			{
+				error: error.message || "Failed to extract PDF",
+				details: error.toString(),
+			},
+			{ status: error.name === "AbortError" ? 504 : 500 }
 		)
 	}
 }
+
+export const dynamic = "force-dynamic"
+export const maxDuration = 120

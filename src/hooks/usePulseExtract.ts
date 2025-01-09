@@ -29,9 +29,15 @@ export const usePulseExtract = () => {
 	const pollStatus = async (jobId: string) => {
 		try {
 			const response = await fetch(`/api/pulse/poll?jobId=${jobId}`)
-			if (!response.ok) throw new Error("Failed to poll status")
-
 			const data = await response.json()
+
+			if (!response.ok) {
+				throw new Error(
+					data.error ||
+						`Failed to poll status: ${response.statusText}`
+				)
+			}
+
 			setProgress(data.progress || Math.min(90, progress + 10))
 
 			if (data.estimated_completion_time) {
@@ -44,15 +50,20 @@ export const usePulseExtract = () => {
 				setProgress(100)
 				return true
 			} else if (data.status === "failed") {
-				throw new Error("Extraction failed")
+				throw new Error(data.error || "Extraction failed")
 			} else {
 				setTimeout(() => pollStatus(jobId), 2000)
 				return false
 			}
 		} catch (error: any) {
 			console.error("Poll error:", error)
-			setExtractionStatus(`Failed to check status: ${error.message}`)
+			setExtractionStatus(
+				`Failed to check status: ${
+					error.message || "Unknown error occurred"
+				}`
+			)
 			setProgress(0)
+			setExtractedData(null)
 			return false
 		}
 	}
@@ -74,8 +85,14 @@ export const usePulseExtract = () => {
 				}),
 			})
 
-			if (!response.ok) throw new Error("Failed to start extraction")
 			const data = await response.json()
+
+			if (!response.ok) {
+				throw new Error(
+					data.error ||
+						`Failed to start extraction: ${response.statusText}`
+				)
+			}
 
 			if ("result" in data) {
 				setExtractedData(data.result)
@@ -88,8 +105,13 @@ export const usePulseExtract = () => {
 			}
 		} catch (error: any) {
 			console.error("Extraction error:", error)
-			setExtractionStatus(`Failed to extract: ${error.message}`)
+			setExtractionStatus(
+				`Failed to extract: ${
+					error.message || "Unknown error occurred"
+				}`
+			)
 			setProgress(0)
+			setExtractedData(null)
 		}
 	}
 
