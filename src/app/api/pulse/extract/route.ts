@@ -1,58 +1,57 @@
 import { NextResponse } from "next/server"
 import { PULSE_API_URL } from "../config"
-import type { PulseConfig } from "../config"
+import type { PulseConfig, PulseExtractResponse } from "../config"
 
 export async function POST(request: Request) {
 	try {
-		const { fileUrl, method, skipPolling } = await request.json()
+		const { fileUrl, method } = await request.json()
 		const apiKey = process.env.PULSE_API_KEY
 
-		console.log("API Key:", {
-			exists: !!apiKey,
-			length: apiKey?.length,
-			value: apiKey?.slice(0, 4) + "..." + apiKey?.slice(-4),
+		console.log("Request details:", {
+			url: `${PULSE_API_URL}/extract`,
+			apiKey: apiKey?.slice(0, 4) + "..." + apiKey?.slice(-4),
+			body: {
+				"file-url": fileUrl,
+				chunking: method || "semantic",
+				return_table: true,
+			},
 		})
 
-		if (!apiKey) {
-			throw new Error("PULSE_API_KEY is not configured")
-		}
-
-		// First verify the file is accessible
-		const fileCheck = await fetch(fileUrl)
-		if (!fileCheck.ok) {
-			throw new Error(`PDF file not accessible: ${fileCheck.status}`)
-		}
-
-		// Use non-async endpoint when skipping polling
-		const endpoint = skipPolling ? "extract" : "extract_async"
-		const response = await fetch(`${PULSE_API_URL}/${endpoint}`, {
+		const response = await fetch(`${PULSE_API_URL}/extract`, {
 			method: "POST",
 			headers: {
+				"x-api-key": apiKey!,
 				"Content-Type": "application/json",
-				"x-api-key": apiKey,
 			},
 			body: JSON.stringify({
 				"file-url": fileUrl,
-				chunking: method,
-				return_tables: true,
+				chunking: method || "semantic",
+				return_table: true,
 			}),
 		})
 
 		const data = await response.json()
+		console.log("Raw API Response:", data)
 
 		if (!response.ok) {
-			console.error("API Error Response:", data)
 			throw new Error(
 				data.error || `HTTP error! status: ${response.status}`
 			)
 		}
 
-		// Return full response for non-async, job_id for async
-		return NextResponse.json(
-			skipPolling ? { result: data } : { job_id: data.job_id }
-		)
+		// Transform the response to match our expected format
+		const result: PulseExtractResponse = {
+			text: data.markdown || data.text,
+			tables:
+				data.tables?.map((table: any) => ({
+					data: Array.isArray(table) ? table : table.data || [],
+				})) || [],
+		}
+
+		console.log("Transformed Response:", result)
+		return NextResponse.json({ result })
 	} catch (error: any) {
-		console.error("Full extraction error:", error)
+		console.error("Extraction error:", error)
 		return NextResponse.json(
 			{ error: error.message || "Failed to extract PDF" },
 			{ status: 500 }
