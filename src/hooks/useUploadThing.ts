@@ -20,6 +20,10 @@ export function useUploadThing() {
 		setProgress(0)
 	}
 
+	const handleUploadProgress = (progress: number) => {
+		setProgress(progress)
+	}
+
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault()
 		if (!selectedFile) return
@@ -55,6 +59,7 @@ export function useUploadThing() {
 		selectedFile,
 		handleFileSelect,
 		handleSubmit,
+		handleUploadProgress,
 		resetUpload,
 		setSelectedFile,
 	}

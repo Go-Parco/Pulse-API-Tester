@@ -1,11 +1,15 @@
+import { useState } from "react"
 import { useUploadThing } from "./useUploadThing"
 import { usePulseExtract } from "./usePulseExtract"
 
-export const useDocumentUpload = () => {
+export function useDocumentUpload() {
+	const [isUsingDefault, setIsUsingDefault] = useState(false)
+	const defaultFileUrl = "/sample.pdf"
+
 	const {
 		uploadedUrl,
 		uploadStatus,
-		progress,
+		progress: uploadProgress,
 		selectedFile,
 		handleFileSelect,
 		handleSubmit: handleUploadSubmit,
@@ -15,22 +19,38 @@ export const useDocumentUpload = () => {
 	} = useUploadThing()
 
 	const {
-		extractionStatus,
 		extractedData,
+		extractionStatus,
+		progress: extractionProgress,
 		startExtraction,
-		setChunkingMethod,
-		timeRemaining,
 		resetExtraction,
 	} = usePulseExtract()
 
 	const handleSubmit = async (e: React.FormEvent) => {
-		const url = await handleUploadSubmit(e)
-		if (url) {
-			await startExtraction(url)
+		e.preventDefault()
+		if (!selectedFile && !isUsingDefault) return
+
+		let fileUrl: string | null = isUsingDefault ? defaultFileUrl : null
+
+		if (!isUsingDefault) {
+			const uploadedFileUrl = await handleUploadSubmit(e)
+			if (uploadedFileUrl) {
+				fileUrl = uploadedFileUrl
+			}
+		}
+
+		if (fileUrl) {
+			await startExtraction(fileUrl)
 		}
 	}
 
-	const resetAll = () => {
+	const useDefaultFile = () => {
+		setIsUsingDefault(true)
+		setSelectedFile(null)
+	}
+
+	const resetForm = () => {
+		setIsUsingDefault(false)
 		resetUpload()
 		resetExtraction()
 	}
@@ -38,18 +58,17 @@ export const useDocumentUpload = () => {
 	return {
 		uploadedUrl,
 		uploadStatus,
-		progress,
-		selectedFile,
-		extractionStatus,
+		uploadProgress,
 		extractedData,
+		extractionStatus,
+		extractionProgress,
+		selectedFile,
+		isUsingDefault,
 		handleFileSelect,
 		handleSubmit,
 		handleUploadProgress,
-		setChunkingMethod,
-		timeRemaining,
-		startExtraction,
-		setSelectedFile,
-		resetAll,
+		useDefaultFile,
+		resetForm,
 	}
 }
 
