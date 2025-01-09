@@ -1,12 +1,12 @@
 import { useState } from "react"
 import { generateReactHelpers } from "@uploadthing/react"
-import type { OurFileRouter } from "@/server/uploadthing"
+import type { OurFileRouter } from "@/app/api/uploadthing/config"
 
 const { useUploadThing: useUploadThingCore } =
 	generateReactHelpers<OurFileRouter>()
 
-export const useUploadThing = () => {
-	const [uploadedUrl, setUploadedUrl] = useState<string | null>(null)
+export function useUploadThing() {
+	const [uploadedUrl, setUploadedUrl] = useState<string>("")
 	const [uploadStatus, setUploadStatus] = useState<string>("")
 	const [progress, setProgress] = useState<number>(0)
 	const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -15,24 +15,23 @@ export const useUploadThing = () => {
 
 	const handleFileSelect = (file: File | null) => {
 		setSelectedFile(file)
+		setUploadedUrl("")
 		setUploadStatus("")
 		setProgress(0)
 	}
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault()
-		if (!selectedFile) {
-			setUploadStatus("No file selected")
-			return null
-		}
+		if (!selectedFile) return
+
+		setUploadStatus("Uploading...")
+		setProgress(0)
 
 		try {
-			setUploadStatus("Starting upload...")
 			const res = await startUpload([selectedFile])
-
 			if (res?.[0]?.url) {
 				setUploadedUrl(res[0].url)
-				setUploadStatus("Upload successful")
+				setUploadStatus("Upload complete")
 				setProgress(100)
 				return res[0].url
 			}
@@ -40,18 +39,13 @@ export const useUploadThing = () => {
 			setUploadStatus(`Upload failed: ${error.message}`)
 			setProgress(0)
 		}
-		return null
-	}
-
-	const handleUploadProgress = (progress: number) => {
-		setProgress(progress)
 	}
 
 	const resetUpload = () => {
-		setUploadedUrl(null)
+		setSelectedFile(null)
+		setUploadedUrl("")
 		setUploadStatus("")
 		setProgress(0)
-		setSelectedFile(null)
 	}
 
 	return {
@@ -61,8 +55,7 @@ export const useUploadThing = () => {
 		selectedFile,
 		handleFileSelect,
 		handleSubmit,
-		handleUploadProgress,
-		setSelectedFile,
 		resetUpload,
+		setSelectedFile,
 	}
 }
