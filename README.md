@@ -1,36 +1,87 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Pulse API Document Extraction Demo
 
-## Getting Started
+This Next.js application demonstrates secure document extraction using the Pulse API and UploadThing for file handling.
 
-First, run the development server:
+## Core Components
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+### Authentication (`src/lib/auth.ts`)
+
+-   Secure admin-only access
+-   Environment variables: `ADMIN_EMAIL` and `ADMIN_PASSWORD`
+-   Session-based authentication with HTTP-only cookies
+
+### File Upload (`src/app/api/uploadthing/`)
+
+-   Uses UploadThing for secure file uploads
+-   Handles PDF files up to 32MB
+-   Returns secure URLs for uploaded files
+
+### Pulse API Integration (`src/app/api/pulse/`)
+
+-   Secure server-side API calls
+-   Environment variable: `PULSE_API_KEY`
+-   Handles extraction and polling for results
+
+## Document Processing Routes
+
+### Route 1: Default Document
+
+```mermaid
+graph TD
+    A[Click Use Default] --> B[Use Default URL]
+    B --> C[Call Pulse Extract API]
+    C --> D[Process Response]
+    D --> E[Display Results]
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Files involved:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. `src/hooks/usePulseExtract.ts` - Manages extraction state
+2. `src/app/api/pulse/extract/route.ts` - Handles Pulse API calls
+3. `src/app/api/pulse/config.ts` - API configuration and types
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Route 2: File Upload
 
-## Learn More
+```mermaid
+graph TD
+    A[Select PDF] --> B[Upload to UploadThing]
+    B --> C[Get Secure URL]
+    C --> D[Call Pulse Extract API]
+    D --> E[Process Response]
+    E --> F[Display Results]
+```
 
-To learn more about Next.js, take a look at the following resources:
+Files involved:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. `src/hooks/useDocumentUpload.ts` - Manages upload state
+2. `src/hooks/useUploadThing.ts` - Handles file uploads
+3. `src/app/api/uploadthing/config.ts` - UploadThing configuration
+4. `src/app/api/pulse/extract/route.ts` - Handles extraction
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Response Format
 
-## Deploy on Vercel
+The application processes and displays:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+-   Extracted text content
+-   Tables (if present)
+-   Raw data view (expandable)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Security Features
+
+1. Server-side API key handling
+2. Secure file uploads via UploadThing
+3. Admin-only access
+4. HTTP-only session cookies
+5. Environment variable configuration
+
+## Environment Setup
+
+Required environment variables:
+
+```env
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=secure_password
+PULSE_API_KEY=your_pulse_api_key
+UPLOADTHING_SECRET=your_uploadthing_secret
+UPLOADTHING_APP_ID=your_uploadthing_app_id
+```
