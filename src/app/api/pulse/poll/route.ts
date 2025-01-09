@@ -5,10 +5,7 @@ import type { PollResponse } from "../config"
 const MAX_RETRIES = 2
 const RETRY_DELAY = 3000
 
-async function pollWithRetry(
-	request: Request,
-	retryCount = 0
-): Promise<Response> {
+export async function GET(request: Request) {
 	try {
 		const { searchParams } = new URL(request.url)
 		const jobId = searchParams.get("jobId")
@@ -25,34 +22,46 @@ async function pollWithRetry(
 			throw new Error("PULSE_API_KEY is not configured")
 		}
 
-		const response = await fetch(`${PULSE_API_URL}/job/${jobId}`, {
-			headers: {
-				"x-api-key": apiKey,
-			},
-		})
+		let retryCount = 0
+		let lastError: Error | null = null
 
-		const data = await response.json()
-		console.log("Poll response:", data)
+		while (retryCount < MAX_RETRIES) {
+			try {
+				const response = await fetch(`${PULSE_API_URL}/job/${jobId}`, {
+					headers: {
+						"x-api-key": apiKey,
+					},
+				})
 
-		const pollResponse: PollResponse = {
-			created_at: data.created_at || new Date().toISOString(),
-			estimated_completion_time:
-				data.estimated_completion_time || new Date().toISOString(),
-			job_id: jobId,
-			progress: 0,
-			status: data.status || "pending",
-			updated_at: data.updated_at || new Date().toISOString(),
-			result: data.result,
+				const data = await response.json()
+				console.log("Poll response:", data)
+
+				const pollResponse: PollResponse = {
+					created_at: data.created_at || new Date().toISOString(),
+					estimated_completion_time:
+						data.estimated_completion_time ||
+						new Date().toISOString(),
+					job_id: jobId,
+					progress: 0,
+					status: data.status || "pending",
+					updated_at: data.updated_at || new Date().toISOString(),
+					result: data.result,
+				}
+
+				return NextResponse.json(pollResponse)
+			} catch (error: any) {
+				lastError = error
+				retryCount++
+				if (retryCount < MAX_RETRIES) {
+					await new Promise((resolve) =>
+						setTimeout(resolve, RETRY_DELAY)
+					)
+				}
+			}
 		}
 
-		return NextResponse.json(pollResponse)
+		throw lastError || new Error("Failed to poll after retries")
 	} catch (error: any) {
-		if (retryCount < MAX_RETRIES) {
-			await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY))
-			return pollWithRetry(request, retryCount + 1)
-		}
 		return NextResponse.json({ error: error.message }, { status: 500 })
 	}
 }
-
-export const GET = pollWithRetry
