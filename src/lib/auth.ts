@@ -3,8 +3,8 @@ import { NextRequest } from "next/server"
 import { serialize, parse } from "cookie"
 
 // Admin credentials stored in environment variables
-export const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@goparco.com"
-export const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "goparco_2025"
+export const ADMIN_EMAIL = process.env.ADMIN_EMAIL
+export const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD
 
 const SESSION_NAME = "admin_session"
 const SESSION_VALUE = "authenticated"

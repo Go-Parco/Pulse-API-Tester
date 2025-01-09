@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react"
-import { extractFromPdf, pollExtractionStatus } from "@/services/pulseApi"
 
 type ChunkingMethod = "semantic" | "recursive"
 
@@ -21,7 +20,7 @@ export const usePulseExtract = () => {
 					0,
 					estimatedTime.getTime() - now.getTime()
 				)
-				setTimeRemaining(Math.round(remaining / 1000)) // Convert to seconds
+				setTimeRemaining(Math.round(remaining / 1000))
 			}, 1000)
 		}
 		return () => clearInterval(timer)
@@ -29,8 +28,10 @@ export const usePulseExtract = () => {
 
 	const pollStatus = async (jobId: string) => {
 		try {
-			console.log("Polling job:", jobId)
-			const data = await pollExtractionStatus(jobId)
+			const response = await fetch(`/api/pulse/poll?jobId=${jobId}`)
+			if (!response.ok) throw new Error("Failed to poll status")
+
+			const data = await response.json()
 			setProgress(data.progress || 0)
 
 			if (data.estimated_completion_time) {
@@ -63,34 +64,29 @@ export const usePulseExtract = () => {
 			setEstimatedTime(null)
 			setExtractedData(null)
 
-			console.log("Starting extraction for:", fileUrl)
-
-			// Show initial progress
-			setProgress(25)
-
-			const response = await extractFromPdf(fileUrl, {
-				chunking: chunkingMethod,
-				return_tables: true,
-				skipPolling: true,
+			const response = await fetch("/api/pulse/extract", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					fileUrl,
+					method: chunkingMethod,
+				}),
 			})
 
-			// Show progress before completion
-			setProgress(75)
+			if (!response.ok) throw new Error("Failed to start extraction")
+			const data = await response.json()
 
-			if ("result" in response) {
-				console.log("Extraction result:", response.result) // Debug log
-				setExtractedData(response.result)
+			if ("result" in data) {
+				setExtractedData(data.result)
 				setProgress(100)
 				setExtractionStatus("Extraction completed!")
 			} else {
 				setExtractionStatus("Processing document...")
-				await pollStatus(response.job_id)
+				await pollStatus(data.job_id)
 			}
 		} catch (error: any) {
 			console.error("Extraction error:", error)
-			setExtractionStatus(
-				`Failed to extract: ${error?.message || "Unknown error"}`
-			)
+			setExtractionStatus(`Failed to extract: ${error.message}`)
 		}
 	}
 

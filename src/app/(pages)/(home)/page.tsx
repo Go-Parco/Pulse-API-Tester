@@ -1,9 +1,11 @@
+"use client"
+
 import React, { useState, useEffect } from "react"
-import { useRouter } from "next/router"
+import { useRouter } from "next/navigation"
 import { useDocumentUpload } from "@/hooks/useDocumentUpload"
 import { UploadForm } from "@/components/UploadForm"
 import { defaultChunks } from "@/types/chunks"
-import { DEFAULT_FILE_URL } from "@/services/pulseApi"
+import { DEFAULT_FILE_URL } from "@/app/api/pulse/config"
 
 export default function Home() {
 	const router = useRouter()
@@ -107,12 +109,12 @@ export default function Home() {
 
 	return (
 		<div className="min-h-screen p-8">
-			<div className="md:flex md:gap-8 md:items-start md:max-w-6xl mx-auto relative">
+			<div className="relative mx-auto md:flex md:gap-8 md:items-start md:max-w-6xl">
 				{/* File Preview - On medium screens, appears on the left */}
 				{shouldShowPreview && (
-					<div className="hidden md:block md:w-1/2 lg:w-2/5 sticky top-8">
-						<div className="border rounded-lg overflow-hidden bg-white">
-							<div className="bg-gray-50 px-4 py-2 border-b">
+					<div className="sticky hidden md:block md:w-1/2 lg:w-2/5 top-8">
+						<div className="overflow-hidden bg-white border rounded-lg">
+							<div className="px-4 py-2 border-b bg-gray-50">
 								<h3 className="text-sm font-medium text-gray-700">
 									File Preview
 								</h3>
@@ -129,7 +131,7 @@ export default function Home() {
 				)}
 
 				{/* Form and Outputs - On medium screens, appears on the right */}
-				<div className="md:flex-1 space-y-4 min-w-0">
+				<div className="min-w-0 space-y-4 md:flex-1">
 					<div className="flex justify-end">
 						<button
 							onClick={handleSignOut}
@@ -173,18 +175,18 @@ export default function Home() {
 
 					{/* Extraction Status and Data */}
 					{extractedData && (
-						<div className="mt-6 bg-white rounded-lg shadow-lg p-6 overflow-x-auto">
-							<h3 className="text-lg font-semibold mb-4">
+						<div className="p-6 mt-6 overflow-x-auto bg-white rounded-lg shadow-lg">
+							<h3 className="mb-4 text-lg font-semibold">
 								Extracted Data
 							</h3>
 							<div className="space-y-4">
 								{/* Display Text Content */}
 								{extractedData.text && (
 									<div>
-										<h4 className="font-medium mb-2">
+										<h4 className="mb-2 font-medium">
 											Extracted Text
 										</h4>
-										<div className="bg-gray-50 rounded p-4 text-sm whitespace-pre-wrap">
+										<div className="p-4 text-sm whitespace-pre-wrap rounded bg-gray-50">
 											{extractedData.text}
 										</div>
 									</div>
@@ -194,7 +196,7 @@ export default function Home() {
 								{extractedData.tables &&
 									extractedData.tables.length > 0 && (
 										<div>
-											<h4 className="font-medium mb-2">
+											<h4 className="mb-2 font-medium">
 												Tables
 											</h4>
 											{extractedData.tables.map(
@@ -202,7 +204,7 @@ export default function Home() {
 													<div
 														key={index}
 														className="overflow-x-auto">
-														<table className="min-w-full border border-gray-200 mb-4">
+														<table className="min-w-full mb-4 border border-gray-200">
 															<tbody>
 																{table.data.map(
 																	(
@@ -229,7 +231,7 @@ export default function Home() {
 																						key={
 																							cellIndex
 																						}
-																						className="border px-4 py-2 text-sm">
+																						className="px-4 py-2 text-sm border">
 																						{
 																							cell
 																						}
@@ -255,11 +257,11 @@ export default function Home() {
 												.open
 										)
 									}>
-									<summary className="cursor-pointer text-sm text-gray-600">
+									<summary className="text-sm text-gray-600 cursor-pointer">
 										View Raw Data
 									</summary>
-									<div className="overflow-x-auto bg-gray-100 p-4 rounded text-xs whitespace-pre">
-										<pre className="mt-2 p-4 rounded text-xs whitespace-pre">
+									<div className="p-4 overflow-x-auto text-xs whitespace-pre bg-gray-100 rounded">
+										<pre className="p-4 mt-2 text-xs whitespace-pre rounded">
 											{JSON.stringify(
 												extractedData,
 												null,

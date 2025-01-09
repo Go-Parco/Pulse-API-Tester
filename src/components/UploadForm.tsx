@@ -76,7 +76,7 @@ export const UploadForm: React.FC<UploadFormProps> = ({
 							Use Default
 						</button>
 					</div>
-					<p className="text-sm text-gray-600 text-center">
+					<p className="text-sm text-center text-gray-600">
 						PDF files up to 8MB
 					</p>
 				</div>
@@ -89,7 +89,7 @@ export const UploadForm: React.FC<UploadFormProps> = ({
 							onClick={() =>
 								setIsPreviewExpanded(!isPreviewExpanded)
 							}
-							className="w-full flex items-center justify-between px-4 py-2 bg-gray-50 rounded-lg border hover:bg-gray-100 transition-colors duration-200">
+							className="flex items-center justify-between w-full px-4 py-2 transition-colors duration-200 border rounded-lg bg-gray-50 hover:bg-gray-100">
 							<span className="text-sm font-medium text-gray-700">
 								File Preview
 							</span>
@@ -109,7 +109,7 @@ export const UploadForm: React.FC<UploadFormProps> = ({
 							</svg>
 						</button>
 						{isPreviewExpanded && (
-							<div className="mt-2 border rounded-lg overflow-hidden">
+							<div className="mt-2 overflow-hidden border rounded-lg">
 								<div className="h-[600px]">
 									<iframe
 										src={filePreviewUrl}
@@ -128,7 +128,7 @@ export const UploadForm: React.FC<UploadFormProps> = ({
 						<div className="flex items-center justify-center space-x-2">
 							{isUploading ? (
 								<>
-									<div className="animate-spin h-4 w-4 border-2 border-blue-500 rounded-full border-t-transparent"></div>
+									<div className="w-4 h-4 border-2 border-blue-500 rounded-full animate-spin border-t-transparent"></div>
 									<p className="text-sm text-gray-600">
 										Uploading document...
 									</p>
@@ -141,7 +141,7 @@ export const UploadForm: React.FC<UploadFormProps> = ({
 						</div>
 
 						<div className="w-full">
-							<label className="block text-sm font-medium text-gray-700 mb-2">
+							<label className="block mb-2 text-sm font-medium text-gray-700">
 								Extraction Method
 							</label>
 							<select
@@ -193,7 +193,7 @@ export const UploadForm: React.FC<UploadFormProps> = ({
 								<button
 									type="button"
 									onClick={onReset}
-									className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors duration-200">
+									className="px-6 py-3 text-white transition-colors duration-200 bg-red-500 rounded-lg hover:bg-red-600">
 									Reset Form
 								</button>
 							)}
@@ -213,7 +213,7 @@ export const UploadForm: React.FC<UploadFormProps> = ({
 					</div>
 					{isExtracting && (
 						<div className="flex items-center justify-center space-x-2">
-							<div className="animate-spin h-4 w-4 border-2 border-blue-500 rounded-full border-t-transparent"></div>
+							<div className="w-4 h-4 border-2 border-blue-500 rounded-full animate-spin border-t-transparent"></div>
 							<p className="text-sm text-gray-600">
 								Extracting document contents...
 							</p>

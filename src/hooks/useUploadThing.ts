@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { generateReactHelpers } from "@uploadthing/react"
-import type { OurFileRouter } from "server/uploadthing"
+import type { OurFileRouter } from "@/server/uploadthing"
 
 const { useUploadThing: useUploadThingCore } =
 	generateReactHelpers<OurFileRouter>()
