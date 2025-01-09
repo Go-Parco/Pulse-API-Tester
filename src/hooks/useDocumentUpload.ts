@@ -4,7 +4,8 @@ import { usePulseExtract } from "./usePulseExtract"
 
 export function useDocumentUpload() {
 	const [isUsingDefault, setIsUsingDefault] = useState(false)
-	const defaultFileUrl = "/sample.pdf"
+	const defaultFileUrl =
+		"https://utfs.io/f/FLqidTvfTRqGLsjyw9WU1YApM8c4qomfkI3S50DdbuOJhrW7"
 
 	const {
 		uploadedUrl,
@@ -24,6 +25,7 @@ export function useDocumentUpload() {
 		progress: extractionProgress,
 		startExtraction,
 		resetExtraction,
+		setChunkingMethod,
 	} = usePulseExtract()
 
 	const handleSubmit = async (e: React.FormEvent) => {
@@ -46,7 +48,10 @@ export function useDocumentUpload() {
 
 	const useDefaultFile = () => {
 		setIsUsingDefault(true)
-		setSelectedFile(null)
+		const mockFile = new File([""], "sample.pdf", {
+			type: "application/pdf",
+		})
+		setSelectedFile(mockFile)
 	}
 
 	const resetForm = () => {
@@ -56,7 +61,7 @@ export function useDocumentUpload() {
 	}
 
 	return {
-		uploadedUrl,
+		uploadedUrl: isUsingDefault ? defaultFileUrl : uploadedUrl,
 		uploadStatus,
 		uploadProgress,
 		extractedData,
@@ -69,6 +74,7 @@ export function useDocumentUpload() {
 		handleUploadProgress,
 		useDefaultFile,
 		resetForm,
+		setChunkingMethod,
 	}
 }
 
