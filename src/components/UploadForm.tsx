@@ -202,26 +202,6 @@ export const UploadForm: React.FC<UploadFormProps> = ({
 				)}
 			</form>
 
-			{/* Progress Bar */}
-			{(progress > 0 && progress < 100) || isExtracting ? (
-				<>
-					<div className="w-full bg-gray-200 rounded-full h-2.5">
-						<div
-							className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
-							style={{ width: `${progress}%` }}
-						/>
-					</div>
-					{isExtracting && (
-						<div className="flex items-center justify-center space-x-2">
-							<div className="w-4 h-4 border-2 border-blue-500 rounded-full animate-spin border-t-transparent"></div>
-							<p className="text-sm text-gray-600">
-								Extracting document contents...
-							</p>
-						</div>
-					)}
-				</>
-			) : null}
-
 			{/* Status Messages */}
 			{uploadStatus && !isExtracting && !isUploading && (
 				<p className="text-sm text-center text-gray-600">

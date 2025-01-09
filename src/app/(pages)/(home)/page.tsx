@@ -58,9 +58,48 @@ export default function Home() {
 				{/* Header Section */}
 				<div className="mb-8 mt-10">
 					<div className="flex justify-between items-center mb-6">
-						<h1 className="text-2xl font-bold text-gray-900">
-							Document Extraction Demo
-						</h1>
+						<div className="space-y-4">
+							<h1 className="text-2xl font-bold text-gray-900">
+								Document Extraction Demo
+							</h1>
+							<div className="space-y-2">
+								<p className="text-gray-600 max-w-2xl">
+									Upload a PDF document to extract its
+									contents using Parco's document processing
+									API. You can either upload your own PDF or
+									use our sample document to test the
+									extraction capabilities.
+								</p>
+								<div className="text-sm text-gray-600 space-y-1">
+									<p className="font-medium">
+										Testing Instructions:
+									</p>
+									<ul className="list-disc list-inside pl-2 space-y-1">
+										<li>
+											Click "Use Default" to test with our
+											sample document
+										</li>
+										<li>
+											Choose between semantic or recursive
+											extraction methods
+										</li>
+										<li>
+											Watch the progress bar for real-time
+											extraction status
+										</li>
+										<li>
+											View extracted text, tables, and raw
+											data in the results
+										</li>
+										<li>
+											Try uploading your own PDF (up to
+											8MB) to test with different
+											documents
+										</li>
+									</ul>
+								</div>
+							</div>
+						</div>
 						<div className="flex flex-col items-end gap-2">
 							<button
 								onClick={handleSignOut}
@@ -96,18 +135,12 @@ export default function Home() {
 							</div>
 						</div>
 					</div>
-					<p className="text-gray-600 max-w-2xl">
-						Upload a PDF document to extract its contents using
-						Parco's document processing API. You can either upload
-						your own PDF or use our sample document to test the
-						extraction capabilities.
-					</p>
 				</div>
 
 				{/* Main Content */}
 				<div className="md:flex md:gap-8 md:items-start">
 					{/* File Preview - On medium screens, appears on the left */}
-					{showPreview && (selectedFile || isUsingDefault) && (
+					{showPreview && (isUsingDefault || uploadedUrl) && (
 						<div className="sticky hidden md:block md:w-1/2 lg:w-2/5 top-8">
 							<div className="overflow-hidden bg-white border rounded-lg">
 								<div className="px-4 py-2 border-b bg-gray-50">
