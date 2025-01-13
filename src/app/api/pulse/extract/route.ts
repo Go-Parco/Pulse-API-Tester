@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { PULSE_API_URL } from "../config"
 import type { PulseConfig, PulseExtractResponse } from "../config"
 
-// Set timeout to 50 seconds (leaving buffer for Vercel's 60s limit)
+// Set timeout to 5.5 seconds (leaving buffer for Vercel's 60s limit)
 const TIMEOUT = 55000
 
 const fetchWithTimeout = async (url: string, options: RequestInit) => {
@@ -74,9 +74,11 @@ export async function POST(request: Request) {
 		const result: PulseExtractResponse = {
 			text: data.markdown || data.text,
 			tables:
-				data.tables?.map((table: any) => ({
-					data: Array.isArray(table) ? table : table.data || [],
-				})) || [],
+				data.tables?.map((table: any) => {
+					// Handle both array format and object format with data property
+					const tableData = Array.isArray(table) ? table : table.data
+					return { data: tableData || [] }
+				}) || [],
 		}
 
 		console.log("Transformed Response:", result)

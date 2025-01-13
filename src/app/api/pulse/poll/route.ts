@@ -1,9 +1,6 @@
 import { NextResponse } from "next/server"
 import { PULSE_API_URL } from "../config"
-import type { PollResponse } from "../config"
-
-const MAX_RETRIES = 2
-const RETRY_DELAY = 3000
+import type { PulseExtractResponse } from "../config"
 
 export async function GET(request: Request) {
 	try {
@@ -11,57 +8,64 @@ export async function GET(request: Request) {
 		const jobId = searchParams.get("jobId")
 		const apiKey = process.env.PULSE_API_KEY
 
-		if (!jobId) {
-			return NextResponse.json(
-				{ error: "Job ID is required" },
-				{ status: 400 }
-			)
-		}
-
 		if (!apiKey) {
 			throw new Error("PULSE_API_KEY is not configured")
 		}
 
-		let retryCount = 0
-		let lastError: Error | null = null
-
-		while (retryCount < MAX_RETRIES) {
-			try {
-				const response = await fetch(`${PULSE_API_URL}/job/${jobId}`, {
-					headers: {
-						"x-api-key": apiKey,
-					},
-				})
-
-				const data = await response.json()
-				console.log("Poll response:", data)
-
-				const pollResponse: PollResponse = {
-					created_at: data.created_at || new Date().toISOString(),
-					estimated_completion_time:
-						data.estimated_completion_time ||
-						new Date().toISOString(),
-					job_id: jobId,
-					progress: 0,
-					status: data.status || "pending",
-					updated_at: data.updated_at || new Date().toISOString(),
-					result: data.result,
-				}
-
-				return NextResponse.json(pollResponse)
-			} catch (error: any) {
-				lastError = error
-				retryCount++
-				if (retryCount < MAX_RETRIES) {
-					await new Promise((resolve) =>
-						setTimeout(resolve, RETRY_DELAY)
-					)
-				}
-			}
+		if (!jobId) {
+			throw new Error("Job ID is required")
 		}
 
-		throw lastError || new Error("Failed to poll after retries")
+		const response = await fetch(`${PULSE_API_URL}/job/${jobId}`, {
+			method: "GET",
+			headers: {
+				"x-api-key": apiKey,
+				"Content-Type": "application/json",
+			},
+		})
+
+		const data = await response.json()
+		console.log("Raw Poll Response:", data)
+
+		// If there's an error about calculate_job_progress, ignore it and continue
+		if (!response.ok && !data.error?.includes("calculate_job_progress")) {
+			throw new Error(
+				data.error || `HTTP error! status: ${response.status}`
+			)
+		}
+
+		// If we have a completed status and result, transform the result
+		if (data.status === "completed" && data.result) {
+			const result: PulseExtractResponse = {
+				text: data.result.markdown || data.result.text,
+				tables:
+					data.result.tables?.map((table: any) => {
+						const tableData = Array.isArray(table)
+							? table
+							: table.data
+						return { data: tableData || [] }
+					}) || [],
+			}
+			return NextResponse.json({
+				status: data.status,
+				result,
+			})
+		}
+
+		// Return just the status for non-completed states
+		return NextResponse.json({
+			status: data.status || "pending",
+		})
 	} catch (error: any) {
-		return NextResponse.json({ error: error.message }, { status: 500 })
+		console.error("Poll error:", error)
+		return NextResponse.json(
+			{
+				error: error.message || "Failed to poll job status",
+				details: error.toString(),
+			},
+			{ status: 500 }
+		)
 	}
 }
+
+export const dynamic = "force-dynamic"
