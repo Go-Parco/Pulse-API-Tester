@@ -45,7 +45,19 @@ export async function GET(request: Request) {
 							: table.data
 						return { data: tableData || [] }
 					}) || [],
+				schema: {
+					document_comes_from:
+						data.result["schema-json"]?.document_comes_from || "",
+					document_kind:
+						data.result["schema-json"]?.document_kind || "",
+					document_name:
+						data.result["schema-json"]?.document_name || "",
+					pay_plan: data.result["schema-json"]?.pay_plan || "",
+				},
 			}
+
+			console.log("Transformed Response with Schema:", result)
+
 			return NextResponse.json({
 				status: data.status,
 				result,

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { usePulseAsyncExtract } from "@/hooks/usePulseAsyncExtract"
 import type { ExtractionState } from "@/hooks/usePulseAsyncExtract"
@@ -87,7 +87,7 @@ export default function SignIn() {
 
 	const handleAsyncExtraction = async () => {
 		const defaultFileUrl =
-			"https://utfs.io/f/FLqidTvfTRqGLsjyw9WU1YApM8c4qomfkI3S50DdbuOJhrW7"
+			"https://2jestdr1ib.ufs.sh/f/FLqidTvfTRqG7ISpBGweVmXo0cniOfj8HrZ9JlWDkq2aU4Gt"
 		await startAsyncExtraction(defaultFileUrl)
 	}
 
@@ -174,6 +174,28 @@ export default function SignIn() {
 						<h3 className="text-lg font-medium text-gray-900">
 							Extraction Results
 						</h3>
+
+						{/* Add Schema Display */}
+						<h4 className="text-2xl">Schema (Queries)</h4>
+						{extractedData?.schema && (
+							<div className="mt-4 p-4 bg-white rounded-lg shadow">
+								<div className="space-y-2">
+									{Object.entries(extractedData.schema).map(
+										([key, value]) => (
+											<div key={key} className="flex">
+												<span className="pr-auto flex-1 font-semibold whitespace-nowrap text-gray-500 capitalize">
+													{key.replace(/_/g, " ")}:
+												</span>
+												<p className="font-thin">
+													{value || "Not specified"}
+												</p>
+											</div>
+										)
+									)}
+								</div>
+							</div>
+						)}
+						<h4 className="text-2xl">Raw Data</h4>
 						{extractedData.text && (
 							<div className="p-4 bg-gray-50 rounded-lg">
 								<h4 className="text-sm font-medium text-gray-700 mb-2">
@@ -184,6 +206,7 @@ export default function SignIn() {
 								</div>
 							</div>
 						)}
+						<h4 className="text-2xl">Tables</h4>
 						{extractedData.tables &&
 							extractedData.tables.length > 0 && (
 								<div className="space-y-4">

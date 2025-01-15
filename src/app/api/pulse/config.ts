@@ -15,12 +15,20 @@ export interface PulseExtractResponse {
 			method: string
 		}>
 	}
+	schema?: {
+		document_comes_from?: string
+		document_kind?: string
+		document_name?: string
+		pay_plan?: string
+		[key: string]: string | undefined
+	}
 }
 
 export interface PulseConfig {
 	chunking?: "semantic" | "recursive"
 	return_tables?: boolean
 	skipPolling?: boolean
+	schema?: string
 }
 
 export interface PollResponse {
@@ -35,4 +43,4 @@ export interface PollResponse {
 
 export const PULSE_API_URL = "https://api.runpulse.com"
 export const DEFAULT_FILE_URL =
-	"https://utfs.io/f/FLqidTvfTRqGcSwhc5GuEZOv1SbIyJa8nHT4zN9UWoDYmdC3"
+	"https://2jestdr1ib.ufs.sh/f/TvfTRqGWZUTvBbN6ep4dEmj3RADhsOzXxUF19rKqcMl"

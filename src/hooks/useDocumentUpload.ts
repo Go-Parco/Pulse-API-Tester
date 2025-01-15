@@ -5,7 +5,7 @@ import { usePulseExtract } from "./usePulseExtract"
 export function useDocumentUpload() {
 	const [isUsingDefault, setIsUsingDefault] = useState(false)
 	const defaultFileUrl =
-		"https://utfs.io/f/FLqidTvfTRqGLsjyw9WU1YApM8c4qomfkI3S50DdbuOJhrW7"
+		"https://2jestdr1ib.ufs.sh/f/FLqidTvfTRqG7ISpBGweVmXo0cniOfj8HrZ9JlWDkq2aU4Gt"
 
 	const {
 		uploadedUrl,

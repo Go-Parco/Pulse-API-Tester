@@ -45,61 +45,72 @@ export const usePulseAsyncExtract = () => {
 		return STATE_PROGRESSION[currentIndex + 1]
 	}
 
-	const pollStatus = async (currentJobId: string) => {
+	const pollStatus = async (jobId: string) => {
 		try {
-			const response = await fetch(
-				`/api/pulse/poll?jobId=${currentJobId}`
-			)
+			const response = await fetch(`/api/pulse/poll?jobId=${jobId}`)
 			const data = await response.json()
 
 			if (!response.ok) {
-				throw new Error(
-					data.error ||
-						`Failed to poll status: ${response.statusText}`
-				)
+				throw new Error(data.error || "Failed to poll status")
 			}
 
-			// Update state based on API response
+			// Update status and progress regardless of state
+			setExtractionStatus(
+				`Processing document... ${Math.round(data.progress)}%`
+			)
+
+			// Handle completion
 			if (data.status === "completed" && data.result) {
-				setExtractedData(data.result)
-				setExtractionStatus("Extraction completed!")
+				console.log("Setting extracted data with schema:", data.result) // Debug log
+				setExtractedData({
+					text: data.result.markdown || data.result.text,
+					tables: data.result.tables || [],
+					schema: {
+						document_comes_from:
+							data.result["schema-json"]?.document_comes_from ||
+							"",
+						document_kind:
+							data.result["schema-json"]?.document_kind || "",
+						document_name:
+							data.result["schema-json"]?.document_name || "",
+						pay_plan: data.result["schema-json"]?.pay_plan || "",
+					},
+				})
 				setExtractionState("completed")
-				setJobId(null)
+				setExtractionStatus("Extraction completed!")
+				// Clear polling interval
 				if (pollInterval) {
 					clearInterval(pollInterval)
 					setPollInterval(null)
 				}
-			} else if (data.status === "failed") {
-				throw new Error(data.error || "Extraction failed")
-			} else {
-				// Only progress forward in states, never backward
-				if (
-					data.status === "processing" &&
-					extractionState === "pending"
-				) {
-					setExtractionState("processing")
-				}
-				// console.log(
-				// 	"Polling status:",
-				// 	data.status,
-				// 	"Current state:",
-				// 	extractionState
-				// )
+				return true // Signal completion
 			}
+
+			// Handle failure
+			if (data.status === "failed") {
+				setExtractionState("failed")
+				setExtractionStatus("Extraction failed")
+				setExtractedData(null)
+				// Clear polling interval
+				if (pollInterval) {
+					clearInterval(pollInterval)
+					setPollInterval(null)
+				}
+				return true // Signal completion
+			}
+
+			return false // Continue polling
 		} catch (error: any) {
-			console.error("Poll error:", error)
-			setExtractionStatus(
-				`Failed to check status: ${
-					error.message || "Unknown error occurred"
-				}`
-			)
+			console.error("Polling error:", error)
 			setExtractionState("failed")
+			setExtractionStatus(`Polling failed: ${error.message}`)
 			setExtractedData(null)
-			setJobId(null)
+			// Clear polling interval
 			if (pollInterval) {
 				clearInterval(pollInterval)
 				setPollInterval(null)
 			}
+			return true // Signal completion
 		}
 	}
 
@@ -132,10 +143,14 @@ export const usePulseAsyncExtract = () => {
 			setExtractionStatus("Processing document...")
 			setExtractionState("processing")
 
-			// Start polling
-			const interval = setInterval(() => {
+			// Start polling with async handling
+			const interval = setInterval(async () => {
 				if (data.job_id) {
-					pollStatus(data.job_id)
+					const shouldStop = await pollStatus(data.job_id)
+					if (shouldStop) {
+						clearInterval(interval)
+						setPollInterval(null)
+					}
 				}
 			}, 2000)
 

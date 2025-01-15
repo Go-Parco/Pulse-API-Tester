@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { UploadForm } from "@/components/UploadForm"
 import { useDocumentUpload } from "@/hooks/useDocumentUpload"
 import { defaultChunks } from "@/types/chunks"
@@ -11,7 +11,7 @@ export default function Home() {
 	const [showPreview, setShowPreview] = useState(true)
 	const [isRawDataExpanded, setIsRawDataExpanded] = useState(false)
 	const DEFAULT_PDF_URL =
-		"https://utfs.io/f/FLqidTvfTRqGLsjyw9WU1YApM8c4qomfkI3S50DdbuOJhrW7"
+		"https://2jestdr1ib.ufs.sh/f/FLqidTvfTRqG7ISpBGweVmXo0cniOfj8HrZ9JlWDkq2aU4Gt"
 
 	const {
 		extractionStatus,
@@ -51,6 +51,20 @@ export default function Home() {
 			console.error("Sign out error:", error)
 		}
 	}
+
+	useEffect(() => {
+		if (extractedData) {
+			console.log("Extracted Data Updated:", {
+				hasSchema: !!extractedData.schema,
+				schema: extractedData.schema,
+				fullData: extractedData,
+			})
+		}
+	}, [extractedData])
+
+	useEffect(() => {
+		console.log("Extracted Data Updated:", extractedData)
+	}, [extractedData])
 
 	return (
 		<div className="min-h-screen p-8">
@@ -198,8 +212,39 @@ export default function Home() {
 									</div>
 								) : extractedData ? (
 									<>
+										{/* Display Schema Information */}
+										{extractedData?.schema && (
+											<div className="mb-6">
+												<h4 className="mb-2 font-medium">
+													Document Information
+												</h4>
+												<div className="p-4 space-y-2 text-sm rounded bg-gray-50">
+													{Object.entries(
+														extractedData.schema
+													).map(([key, value]) => (
+														<div
+															key={key}
+															className="flex">
+															<span className="w-40 font-medium capitalize">
+																{key.replace(
+																	/_/g,
+																	" "
+																)}
+																:
+															</span>
+															<p>
+																{/* @ts-ignore*/}
+																{value ||
+																	"Not specified"}
+															</p>
+														</div>
+													))}
+												</div>
+											</div>
+										)}
+
 										{/* Display Text Content */}
-										{extractedData?.text && (
+										{extractedData.text && (
 											<div>
 												<h4 className="mb-2 font-medium">
 													Extracted Text

@@ -18,7 +18,12 @@ export async function POST(request: Request) {
 				"file-url": fileUrl,
 				chunking: "semantic",
 				return_table: true,
-				schema: {},
+				schema: {
+					document_comes_from: "string",
+					document_name: "string",
+					document_kind: "string",
+					pay_plan: "string",
+				},
 			},
 		})
 
@@ -31,8 +36,13 @@ export async function POST(request: Request) {
 			body: JSON.stringify({
 				"file-url": fileUrl,
 				chunking: "semantic",
-				return_table: true,
-				schema: {},
+				return_table: false,
+				schema: {
+					document_comes_from: "string",
+					document_name: "string",
+					document_kind: "string",
+					pay_plan: "string",
+				},
 			}),
 		})
 
