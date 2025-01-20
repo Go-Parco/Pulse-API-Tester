@@ -2,29 +2,40 @@ import { NextResponse } from "next/server"
 import { PULSE_API_URL } from "../config"
 import type { PulseConfig } from "../config"
 
+// Define the default schema according to the API docs
+const DEFAULT_SCHEMA = {
+	document_comes_from: "string",
+	document_name: "string",
+	document_kind: "string",
+	pay_plan: "string",
+}
+
+type Schema = Record<string, string>
+
 export async function POST(request: Request) {
 	try {
-		const { fileUrl } = await request.json()
+		const { fileUrl, schema } = await request.json()
 		const apiKey = process.env.PULSE_API_KEY
 
 		if (!apiKey) {
 			throw new Error("PULSE_API_KEY is not configured")
 		}
 
+		// Convert schema to proper format if provided
+		const finalSchema = DEFAULT_SCHEMA
+
+		const requestBody = {
+			"file-url": fileUrl,
+			chunking: "semantic",
+			return_table: true,
+			schema: finalSchema,
+			extract_schema: true,
+		}
+
 		console.log("Request details:", {
 			url: `${PULSE_API_URL}/extract_async`,
 			apiKey: apiKey?.slice(0, 4) + "..." + apiKey?.slice(-4),
-			body: {
-				"file-url": fileUrl,
-				chunking: "semantic",
-				return_table: true,
-				schema: {
-					document_comes_from: "string",
-					document_name: "string",
-					document_kind: "string",
-					pay_plan: "string",
-				},
-			},
+			body: requestBody,
 		})
 
 		const response = await fetch(`${PULSE_API_URL}/extract_async`, {
@@ -33,17 +44,7 @@ export async function POST(request: Request) {
 				"x-api-key": apiKey,
 				"Content-Type": "application/json",
 			},
-			body: JSON.stringify({
-				"file-url": fileUrl,
-				chunking: "semantic",
-				return_table: false,
-				schema: {
-					document_comes_from: "string",
-					document_name: "string",
-					document_kind: "string",
-					pay_plan: "string",
-				},
-			}),
+			body: JSON.stringify(requestBody),
 		})
 
 		if (!response.ok) {

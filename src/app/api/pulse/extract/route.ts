@@ -2,26 +2,6 @@ import { NextResponse } from "next/server"
 import { PULSE_API_URL } from "../config"
 import type { PulseConfig, PulseExtractResponse } from "../config"
 
-// Set timeout to 5.5 seconds (leaving buffer for Vercel's 60s limit)
-const TIMEOUT = 55000
-
-const fetchWithTimeout = async (url: string, options: RequestInit) => {
-	const controller = new AbortController()
-	const id = setTimeout(() => controller.abort(), TIMEOUT)
-
-	try {
-		const response = await fetch(url, {
-			...options,
-			signal: controller.signal,
-		})
-		clearTimeout(id)
-		return response
-	} catch (error) {
-		clearTimeout(id)
-		throw error
-	}
-}
-
 export async function POST(request: Request) {
 	try {
 		const { fileUrl, method } = await request.json()
@@ -41,7 +21,7 @@ export async function POST(request: Request) {
 			},
 		})
 
-		const response = await fetchWithTimeout(`${PULSE_API_URL}/extract`, {
+		const response = await fetch(`${PULSE_API_URL}/extract`, {
 			method: "POST",
 			headers: {
 				"x-api-key": apiKey,

@@ -1,5 +1,9 @@
+"use client"
+
 import React, { useState } from "react"
 import { ChunkDefinition } from "@/types/chunks"
+import { useDocumentUploadThingUpload } from "@/hooks/useDocumentUploadThingUpload"
+import { OurFileRouter } from "@/app/api/uploadthing/config"
 
 interface UploadFormProps {
 	selectedFile: File | null
@@ -20,11 +24,7 @@ interface UploadFormProps {
 }
 
 export const UploadForm: React.FC<UploadFormProps> = ({
-	selectedFile,
 	progress,
-	uploadStatus,
-	handleFileSelect,
-	handleSubmit,
 	chunks,
 	onChunkSelect,
 	onUseDefault,
@@ -36,21 +36,48 @@ export const UploadForm: React.FC<UploadFormProps> = ({
 	extractedData,
 	isProcessing = false,
 }) => {
+	// Extract mode hooks
+	const {
+		extractionStatus,
+		extractedData: syncExtractedData,
+		uploadProgress,
+		extractionProgress,
+		uploadStatus,
+		selectedFile,
+		isUsingDefault,
+		handleFileSelect,
+		handleSubmit,
+		useDefaultFile,
+		resetForm,
+		uploadedUrl,
+		setChunkingMethod,
+	} = useDocumentUploadThingUpload()
+
 	const [isPreviewExpanded, setIsPreviewExpanded] = useState(false)
 	const isComplete = extractedData !== undefined
 	const shouldDisableControls = isProcessing || isComplete
 
+	const onSubmit = async (e: React.FormEvent) => {
+		e.preventDefault()
+		if (!selectedFile) return
+		await handleSubmit(e)
+	}
+
+	const onFileSelect = (file: File | null) => {
+		handleFileSelect(file)
+	}
+
 	return (
 		<div className="space-y-4">
-			<form onSubmit={handleSubmit} className="space-y-4">
+			<form onSubmit={onSubmit} className="space-y-4">
 				<div className="w-full space-y-2">
 					<div className="flex gap-2">
 						<input
 							type="file"
 							onChange={(e) =>
-								handleFileSelect(e.target.files?.[0] || null)
+								onFileSelect(e.target.files?.[0] || null)
 							}
-							accept="application/pdf"
+							accept="application/pdf,image/*"
 							className="hidden"
 							id="file-upload"
 							disabled={isProcessing}
@@ -62,7 +89,7 @@ export const UploadForm: React.FC<UploadFormProps> = ({
 									? "bg-gray-400 cursor-not-allowed"
 									: "bg-blue-500 hover:bg-blue-600 cursor-pointer"
 							} text-white rounded-lg transition-colors duration-200`}>
-							{selectedFile ? selectedFile.name : "Select PDF"}
+							{selectedFile ? selectedFile.name : "Select File"}
 						</label>
 						<button
 							type="button"
@@ -77,7 +104,7 @@ export const UploadForm: React.FC<UploadFormProps> = ({
 						</button>
 					</div>
 					<p className="text-sm text-center text-gray-600">
-						PDF files up to 8MB
+						PDF and image files up to 8MB
 					</p>
 				</div>
 

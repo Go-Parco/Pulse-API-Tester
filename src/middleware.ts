@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
 // List of public paths that don't require authentication
-const publicPaths = ["/sign-in"]
+const publicPaths = ["/", "/sign-in"]
 
 export function middleware(request: NextRequest) {
 	const { pathname } = request.nextUrl
@@ -11,12 +11,12 @@ export function middleware(request: NextRequest) {
 	// Get the authentication cookie
 	const authCookie = request.cookies.get("auth_session")
 
-	// If the path is public and user is authenticated, redirect to home
+	// Redirect authenticated users away from public paths to dashboard
 	if (isPublicPath && authCookie) {
-		return NextResponse.redirect(new URL("/", request.url))
+		return NextResponse.redirect(new URL("/dashboard", request.url))
 	}
 
-	// If the path is protected and user is not authenticated, redirect to sign-in
+	// Redirect unauthenticated users to sign-in
 	if (!isPublicPath && !authCookie) {
 		const signInUrl = new URL("/sign-in", request.url)
 		return NextResponse.redirect(signInUrl)

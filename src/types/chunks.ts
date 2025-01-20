@@ -8,13 +8,13 @@ export interface ChunkDefinition {
 export const defaultChunks: ChunkDefinition[] = [
 	{
 		id: "semantic",
-		label: "Semantic",
+		label: "Semantic Chunking",
 		value: "semantic",
 		description: "Optimized for forms and structured documents",
 	},
 	{
 		id: "recursive",
-		label: "Recursive",
+		label: "Recursive Chunking",
 		value: "recursive",
 		description: "Based on document structure",
 	},

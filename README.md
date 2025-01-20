@@ -1,87 +1,70 @@
-# Pulse API Document Extraction Demo
+# Readme
 
-This Next.js application demonstrates secure document extraction using the Pulse API and UploadThing for file handling.
+<img src="https://i.ibb.co/0cPzFSS/Property-1-Dark.png" alt="Property-1-Dark" border="0" />
 
-## Core Components
+For instructions on how this queries code works as well as a breakdown to the methodology with the [query table - `DevReadme.md` here](https://github.com/Go-Parco/OCR/blob/main/DEV_README.mdx).
 
-### Authentication (`src/lib/auth.ts`)
+**Feel free to modify the prettier settings to your liking. I'm not a fan of the current settings and I feel like they changed on me recently somehow.**
 
--   Secure admin-only access
--   Environment variables: `ADMIN_EMAIL` and `ADMIN_PASSWORD`
--   Session-based authentication with HTTP-only cookies
+## Application
 
-### File Upload (`src/app/api/uploadthing/`)
+~~As of this time there is no application for this code currently, it is merely a collection of queries for the Parko OCR project.~~ **I have converted this application into a Next.js application for real-time testing and demo-ing of the functions and features built into this application.** Built on typescript, and utlizing packages like zod to validate the queries and provide a structure for the queries to be submitted to the image parser.
 
--   Uses UploadThing for secure file uploads
--   Handles PDF files up to 32MB
--   Returns secure URLs for uploaded files
+Transpilation chart is for local backup only. I shared a copy of the collaborative version via email.
 
-### Pulse API Integration (`src/app/api/pulse/`)
+I did create a home page for use in react/nextJS, but i've only used it for testing the Marker conversion function.
 
--   Secure server-side API calls
--   Environment variable: `PULSE_API_KEY`
--   Handles extraction and polling for results
+## AGENCY STATUS
 
-## Document Processing Routes
+See Transpilation chart > Completeness tab for breakdown on agency completeness.
 
-### Route 1: Default Document
+In short though:
 
-```mermaid
-graph TD
-    A[Click Use Default] --> B[Use Default URL]
-    B --> C[Call Pulse Extract API]
-    C --> D[Process Response]
-    D --> E[Display Results]
-```
+-   [x] USDA
+-   [x] DOD
+-   [x] DOE
+-   [x] TVA
+-   [x] GSA
+-   [ ] USPS
 
-Files involved:
+## Query Status
 
-1. `src/hooks/usePulseExtract.ts` - Manages extraction state
-2. `src/app/api/pulse/extract/route.ts` - Handles Pulse API calls
-3. `src/app/api/pulse/config.ts` - API configuration and types
+-   [x] Completed Query in each repective agencies folder
+-   [x] Completed Verification that the master queries type sheet contains all types contained within the transpilation chart. (Two way check)
+-   [x] Completed the matching and expanded upon zod type object
+-   [ ] Optional - Further validate the codes pertaining to each agency if desired.
 
-### Route 2: File Upload
+### Values not yet figured how to query
 
-```mermaid
-graph TD
-    A[Select PDF] --> B[Upload to UploadThing]
-    B --> C[Get Secure URL]
-    C --> D[Call Pulse Extract API]
-    D --> E[Process Response]
-    E --> F[Display Results]
-```
+-   [ ] DOD > Deductions > Fegli x Current (deduction.fegli.basic)
+-   [ ] GSA > Deductions > Current Dental (deduction.fdvv)
+-   [ ] GSA > Deductions > Current Medicare (deduction.medicareBeforeTax)
+-   [ ] GSA > Deductions > Current OASDI (deduction.oasdi)
+-   [ ] GSA > Deductions > Current fedMedEE (deduction.fedMedEE)
+-   [ ] DOE > Deductions > Current OASDI Tax (deduction.oasdi)
+-   [ ] DOE > Deductions > Addtl Wthld x Federal (deduction.withholdingFed)
+-   [ ] DOE > Deductions > Addtl Wthld x State (deduction.withholdingState)
 
-Files involved:
+**Note to self - Remember to add .int() to all the zod schemas that are strict numbers and don't contain any decimals**
 
-1. `src/hooks/useDocumentUpload.ts` - Manages upload state
-2. `src/hooks/useUploadThing.ts` - Handles file uploads
-3. `src/app/api/uploadthing/config.ts` - UploadThing configuration
-4. `src/app/api/pulse/extract/route.ts` - Handles extraction
+## Unknown query methods
 
-## Response Format
+-   [ ] Figure out how to query tables or index tables
+-   [ ] Maybe train our own model eventuallly to do this. I have created my own model using AppleML.
+-   [ ] Also, We could experiment with the Tesseract.js / SribeOCR library to see if it can extract tables from images, primarily for GSA / USPS documents. The demo here looks promising:
+        [tesseract demo](https://tesseract.projectnaptha.com)
+        [tesseract docs](https://github.com/naptha/tesseract.js#tesseractjs)
+        Also, if we run into pdf docs, then scribe looks like it could handle the ocr for those.
 
-The application processes and displays:
+## Non-Querieing Types
 
--   Extracted text content
--   Tables (if present)
--   Raw data view (expandable)
+Types that are not specific to querying can be found in the `types` folder > `FileTypes.ts` file. Most of the openAI types are there, as well as the types needed for the frontend to prevent
+duplicate types.
 
-## Security Features
+# OCR_Parco_Test
 
-1. Server-side API key handling
-2. Secure file uploads via UploadThing
-3. Admin-only access
-4. HTTP-only session cookies
-5. Environment variable configuration
+## File Upload / URL Upload Issues needed to sort out
 
-## Environment Setup
-
-Required environment variables:
-
-```env
-ADMIN_EMAIL=admin@example.com
-ADMIN_PASSWORD=secure_password
-PULSE_API_KEY=your_pulse_api_key
-UPLOADTHING_SECRET=your_uploadthing_secret
-UPLOADTHING_APP_ID=your_uploadthing_app_id
-```
+-   multi-page pdfs.
+-   Checking a url to see if it's a pdf.
+-   Converting the pdf to a base64 then to an image, for processing. (Nyckel doesn't like pdfs)

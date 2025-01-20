@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from "next"
 import { NextRequest } from "next/server"
+import { cookies } from "next/headers"
 import { serialize, parse } from "cookie"
 
 // Admin credentials stored in environment variables
@@ -8,6 +9,11 @@ export const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD
 
 const SESSION_NAME = "admin_session"
 const SESSION_VALUE = "authenticated"
+
+export async function auth() {
+	const cookieStore = await cookies()
+	return cookieStore.get(SESSION_NAME)?.value === SESSION_VALUE
+}
 
 export function createSession(res: NextApiResponse) {
 	const cookie = serialize(SESSION_NAME, SESSION_VALUE, {

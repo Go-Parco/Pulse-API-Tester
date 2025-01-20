@@ -1,0 +1,117 @@
+# DEVELOPER README
+
+Each type of government entity (e.g. USDA, DOD, etc...) is referred to as an agency.
+[Image Parser (link)](https://us-east-2.signin.aws.amazon.com/oauth?client_id=arn%3Aaws%3Asignin%3A%3A%3Aconsole%2Ftextract&code_challenge=GCf-hXkSmakzbwk9qi9Wi4HGF_0jKrDGMfAiFm8JGGY&code_challenge_method=SHA-256&response_type=code&redirect_uri=https%3A%2F%2Fus-east-2.console.aws.amazon.com%2Ftextract%2Fhome%3FhashArgs%3D%2523%252Fdemo%26isauthcode%3Dtrue%26oauthStart%3D1733096730749%26region%3Dus-east-2%26state%3DhashArgsFromTB_us-east-2_8577cca2bd9e26f0) can be found here
+
+## Query Types
+
+```typescript
+type Query {
+  Marker: String // susinct descriptor of query location. Written in CSS-esque format.
+  Text: String // The query text that should be output by providing the queryConversion function with the Marker string. It is what is sent to the image parser to retrieve the data.value.
+  Alias?: String // The data structure provided to me at the beginning of the project (incomplete). If not provided, defualts to "".
+  Name: String // My own suggested data structure for the query. (item only) example : tsp.optional {tsp: { fers: "", optional: ""}}.  Intended to also fill in the gaps of the available Alias data structure.
+  Container: String // My own suggested data structure for the query containing folders. (Seperated for readablity, provided to better structure data for readability). example : benefit
+  Verified: Boolean // Whether the query has been verified as working on the image parser.
+  Code?: String // The code defined by the agency associated with the query (unchanging). Example: if deduction.healthInsurancePremium is always referred to by a code of "M1"
+}
+
+// Example Name/Container structure
+//      QUERY STRUCTURE     -----    ALIAS / NAME - CONTAINER STRUCTURE     -----       NoSQL db structure (foreseeable)
+// {Name: "tsp.fers", Container: "benefit"}         === benefit.tsp.fers                                    === benefit: { tsp: { fers: ""}}}
+```
+
+## Query Validation
+
+Queries are validated when written by typescript type checking
+Queries are also validated by type checking at time of submittal via Zod, validationg both the data types as well as more descript object / data value validation.
+
+### Example
+
+While the typechecking ensures there is no missing values and a value is a string, zod ensures all that as well as further validation, and also includes error messages for dev / client side validation and user feedback.
+
+```typescript
+  const payPeriodStart = "2021-01-01";
+   type Query {
+      basic: {
+        payPeriodStart :String
+     }
+   }
+
+  const zodQuery = z.object({
+    basic: z.object({
+       payPeriodStart: z.string().refine((val) => {
+           return val.match(/\d{4}-\d{2}-\d{2}/) !== null;
+        }, { message: "payPeriodStart must be in the format YYYY-MM-DD" })
+        // validates both string and data format
+    })
+  });
+```
+
+This ensures that upon writing, the developer doesn't miss any required query object properties, and that the data being submitted back from the image parser is in the correct format.
+
+### Zod Validation Use Case
+
+I imagine that the zod validation for an image preview wouldn't be used for validation in the traditional sense - ie as in to prevent form submission,
+No, instead I imagine it would be useful for providing metrics on how well the image parser is performing, and maybe output returned values in a 
+secondary table for future OCR training, and notifications on when the parser isn't returning the expected values.
+
+## Conversion Function
+
+The conversion function is an optional function that converts the `query.Marker<string>` to the `query.Text<string>`.
+This is useful for eliminating unnecessary repetitive text in the query.Text, and also for providing quickly describing the query in a single string.
+Another great thing about it's use is that it ensures that as we add agencies, to our stack, the conversion function can be modified as opposed
+to trying to keep track of the syntax required for seperate queries, ensuring relyable data extraction. It works then in a sense as a translation layer,
+between the dev and the image parser, regardless of the agency formatting.
+
+## Marker
+
+The marker describes the text, without the unessessary text. It also ensures that each query.Text follows a consistent format, making it easier to read and write queries.
+
+### Table Lookup
+
+```typescript
+// EXAMPLE 1
+Marker: "healthInsurancePremium x CURRENT"
+// Looks up the value intersecting the healthInsurancePremium row and the CURRENT column
+// Query.Text: "What is the CURRENT healthInsurancePremium?"
+```
+
+### Nested Markers
+
+```typescript
+// EXAMPLE 1
+Marker: "DEDUCTIONS > TSP x CURRENT"
+// the containing "object / table" is marked by being followed by a ">"
+// this also describes which table the value is found on in the leave statement image
+// ie: the deductions table, and the TSP row and the CURRENT column
+// Query.Text: "In the DEDUCTIONS table, what is the CURRENT TSP?"
+
+// EXAMPLE 2
+Marker: "DEDUCTIONS > ITEMS > FERS"
+// This is a double nested marker, describing within the deductions table, within the ITEMS table, and the FERS cell.value
+// Query.Text: "In the DEDUCTIONS table, in the ITEMS table, what is the FERS?"
+```
+
+### Table Index Markers
+
+I haven't gotten the image reader to read the values according to image location yet. So for now, the table index markers are used to describe the location of the value in the table.
+I'm thinking this may need to be trained by us in a custom OCR image reader.
+
+```typescript
+// EXAMPLE 1
+Marker: "DEDUCTIONS > healthInsurancePremium [0]"
+// This is a table index marker, describing the first row to the right of the healthInsurancePremium row in the DEDUCTIONS table. "used when no table column header is provided"
+
+// EXAMPLE 2
+Marker: "DEDUCTIONS > healthInsurancePremium [-1]"
+// This is a table index marker, describing the first row to the left of the healthInsurancePremium row in the DEDUCTIONS table. "used when no table column header is provided"
+
+// EXAMPLE 3
+Marker: "healthInsurancePremium V[-1]"
+// This is a table index marker, describing the value above the healthInsurancePremium. "used when no identifying header is provided"
+
+// EXAMPLE 4
+Marker: "healthInsurancePremium V[1]"
+// This is a table index marker, describing the value below the healthInsurancePremium ."used when no identifying header is provided"
+```

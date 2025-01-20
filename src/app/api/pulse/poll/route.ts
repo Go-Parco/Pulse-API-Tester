@@ -36,6 +36,15 @@ export async function GET(request: Request) {
 
 		// If we have a completed status and result, transform the result
 		if (data.status === "completed" && data.result) {
+			console.log(
+				"Raw Poll Response Data:",
+				JSON.stringify(data.result, null, 2)
+			)
+
+			// Extract schema data from the result
+			const schemaData = data.result["schema-json"] || {}
+			console.log("Schema Data:", schemaData)
+
 			const result: PulseExtractResponse = {
 				text: data.result.markdown || data.result.text,
 				tables:
@@ -46,27 +55,28 @@ export async function GET(request: Request) {
 						return { data: tableData || [] }
 					}) || [],
 				schema: {
-					document_comes_from:
-						data.result["schema-json"]?.document_comes_from || "",
-					document_kind:
-						data.result["schema-json"]?.document_kind || "",
-					document_name:
-						data.result["schema-json"]?.document_name || "",
-					pay_plan: data.result["schema-json"]?.pay_plan || "",
+					document_comes_from: String(
+						schemaData.document_comes_from || ""
+					),
+					document_kind: String(schemaData.document_kind || ""),
+					document_name: String(schemaData.document_name || ""),
+					pay_plan: String(schemaData.pay_plan || ""),
 				},
 			}
 
-			console.log("Transformed Response with Schema:", result)
+			console.log("Transformed Response:", result)
 
 			return NextResponse.json({
 				status: data.status,
 				result,
+				progress: data.progress || 100,
 			})
 		}
 
 		// Return just the status for non-completed states
 		return NextResponse.json({
 			status: data.status || "pending",
+			progress: data.progress || 0,
 		})
 	} catch (error: any) {
 		console.error("Poll error:", error)

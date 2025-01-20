@@ -27,8 +27,7 @@ const adapter: Adapter = {
 					{
 						id: "admin",
 						attributes: {
-							email:
-								process.env.ADMIN_EMAIL || "admin@goparco.com",
+							email: process.env.ADMIN_EMAIL!,
 						},
 					},
 			  ]
