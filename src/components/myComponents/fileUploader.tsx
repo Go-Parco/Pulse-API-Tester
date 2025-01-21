@@ -21,6 +21,7 @@ import {
 import { DiApple } from "react-icons/di"
 import { AiFillFile } from "react-icons/ai"
 import * as mm from "music-metadata-browser"
+import DocumentNameDisplay from "@/components/DocumentNameDisplay"
 
 interface PreviewType {
 	type: "audio" | "image" | "pdf" | "other"
@@ -183,6 +184,8 @@ export interface FileUploaderProps {
 	disabled?: boolean
 	className?: string
 	fileInputRef?: React.RefObject<HTMLInputElement>
+	documentName?: string
+	fileUrl?: string
 }
 
 const FileUploader: React.FC<FileUploaderProps> = ({
@@ -195,6 +198,8 @@ const FileUploader: React.FC<FileUploaderProps> = ({
 	disabled = false,
 	className = "",
 	fileInputRef = undefined,
+	documentName = "",
+	fileUrl,
 }) => {
 	const [selectedFiles, setSelectedFiles] = useState<File[]>([])
 	const [previews, setPreviews] = useState<PreviewType[]>([])
@@ -393,24 +398,132 @@ const FileUploader: React.FC<FileUploaderProps> = ({
 	}
 
 	return (
-		<div
-			{...getRootProps()}
-			className={cn(
-				"border-dashed border-2 border-zinc-300 p-6 rounded-lg cursor-pointer hover:border-zinc-400 transition-colors max-h-[475px] overflow-y-auto",
-				disabled && "opacity-50 cursor-not-allowed",
-				className
-			)}>
-			<input {...getInputProps()} />
-			<div className="flex flex-col items-center justify-center gap-4">
-				{selectedFiles.length > 0 ? (
-					<div className="flex flex-col gap-6 w-full items-center relative">
-						{!acceptMultiple && (
-							<button
-								onClick={clearFiles}
-								className="sticky top-0 right-2 p-1 bg-white/80 hover:bg-white rounded-full shadow-sm z-10 self-end"
-								type="button">
+		<div className="space-y-4">
+			{selectedFiles.length > 0 && selectedFiles[0] && (
+				<DocumentNameDisplay
+					originalFileName={selectedFiles[0].name}
+					documentName={documentName}
+					fileUrl={fileUrl}
+				/>
+			)}
+			<div
+				{...getRootProps()}
+				className={cn(
+					"border-dashed border-2 border-zinc-300 p-6 rounded-lg cursor-pointer hover:border-zinc-400 transition-colors max-h-[475px] overflow-y-auto",
+					disabled && "opacity-50 cursor-not-allowed",
+					className
+				)}>
+				<input {...getInputProps()} />
+				<div className="flex flex-col items-center justify-center gap-4">
+					{selectedFiles.length > 0 ? (
+						<div className="flex flex-col gap-6 w-full items-center relative">
+							{!acceptMultiple && (
+								<button
+									onClick={clearFiles}
+									className="sticky top-0 right-2 p-1 bg-white/80 hover:bg-white rounded-full shadow-sm z-10 self-end"
+									type="button">
+									<svg
+										className="w-4 h-4 text-zinc-600"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24">
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M6 18L18 6M6 6l12 12"
+										/>
+									</svg>
+								</button>
+							)}
+							{selectedFiles.map((file, index) => {
+								if (!file) return null
+
+								const fileName = file.name.toLowerCase()
+								const fileType = file.type.toLowerCase()
+								const preview = previews[index]
+								const isImage =
+									fileType.startsWith("image/") ||
+									fileName.endsWith(".svg")
+								const isAudioFile =
+									fileType.startsWith("audio/") ||
+									[
+										".mp3",
+										".m4a",
+										".wav",
+										".ogg",
+										".flac",
+										".aac",
+									].some((ext) => fileName.endsWith(ext))
+
+								return (
+									<div
+										key={index}
+										className="flex items-center gap-4 w-full relative">
+										{acceptMultiple && (
+											<button
+												onClick={(e) =>
+													removeFile(e, index)
+												}
+												className="absolute -top-2 -right-2 p-1 bg-white hover:bg-zinc-50 rounded-full shadow-sm z-10"
+												type="button">
+												<svg
+													className="w-4 h-4 text-zinc-600"
+													fill="none"
+													stroke="currentColor"
+													viewBox="0 0 24 24">
+													<path
+														strokeLinecap="round"
+														strokeLinejoin="round"
+														strokeWidth={2}
+														d="M6 18L18 6M6 6l12 12"
+													/>
+												</svg>
+											</button>
+										)}
+										{!isAudioFile && (
+											<div className="relative w-full sm:w-auto">
+												{isImage ? (
+													<img
+														src={
+															preview?.preview ||
+															"https://user-images.githubusercontent.com/2351721/31314483-7611c488-ac0e-11e7-97d1-3cfc1c79610e.png"
+														}
+														alt={`Preview ${
+															index + 1
+														}`}
+														className="max-h-[200px] min-w-[100px] min-h-[100px] w-auto object-contain mx-auto rounded-md"
+													/>
+												) : (
+													<div className="flex justify-center min-w-[100px]">
+														{getFileIcon(
+															file.type ||
+																file.name,
+															64
+														)}
+													</div>
+												)}
+											</div>
+										)}
+										<div className="flex-1 min-w-[200px] w-full sm:w-auto">
+											<div className="max-w-[300px]">
+												<p className="text-zinc-600 font-medium truncate">
+													{file.name}
+												</p>
+												<p className="text-zinc-400 text-sm">
+													{getFileSize(file.size)} MB
+												</p>
+											</div>
+										</div>
+									</div>
+								)
+							})}
+						</div>
+					) : (
+						<>
+							<div className="p-4 bg-zinc-100 rounded-full">
 								<svg
-									className="w-4 h-4 text-zinc-600"
+									className="w-6 h-6 text-zinc-500"
 									fill="none"
 									stroke="currentColor"
 									viewBox="0 0 24 24">
@@ -418,131 +531,37 @@ const FileUploader: React.FC<FileUploaderProps> = ({
 										strokeLinecap="round"
 										strokeLinejoin="round"
 										strokeWidth={2}
-										d="M6 18L18 6M6 6l12 12"
+										d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
 									/>
 								</svg>
-							</button>
-						)}
-						{selectedFiles.map((file, index) => {
-							if (!file) return null
-
-							const fileName = file.name.toLowerCase()
-							const fileType = file.type.toLowerCase()
-							const preview = previews[index]
-							const isImage =
-								fileType.startsWith("image/") ||
-								fileName.endsWith(".svg")
-							const isAudioFile =
-								fileType.startsWith("audio/") ||
-								[
-									".mp3",
-									".m4a",
-									".wav",
-									".ogg",
-									".flac",
-									".aac",
-								].some((ext) => fileName.endsWith(ext))
-
-							return (
-								<div
-									key={index}
-									className="flex items-center gap-4 w-full relative">
-									{acceptMultiple && (
-										<button
-											onClick={(e) =>
-												removeFile(e, index)
-											}
-											className="absolute -top-2 -right-2 p-1 bg-white hover:bg-zinc-50 rounded-full shadow-sm z-10"
-											type="button">
-											<svg
-												className="w-4 h-4 text-zinc-600"
-												fill="none"
-												stroke="currentColor"
-												viewBox="0 0 24 24">
-												<path
-													strokeLinecap="round"
-													strokeLinejoin="round"
-													strokeWidth={2}
-													d="M6 18L18 6M6 6l12 12"
-												/>
-											</svg>
-										</button>
-									)}
-									{!isAudioFile && (
-										<div className="relative w-full sm:w-auto">
-											{isImage ? (
-												<img
-													src={
-														preview?.preview ||
-														"https://user-images.githubusercontent.com/2351721/31314483-7611c488-ac0e-11e7-97d1-3cfc1c79610e.png"
-													}
-													alt={`Preview ${index + 1}`}
-													className="max-h-[200px] min-w-[100px] min-h-[100px] w-auto object-contain mx-auto rounded-md"
-												/>
-											) : (
-												<div className="flex justify-center min-w-[100px]">
-													{getFileIcon(
-														file.type || file.name,
-														64
-													)}
-												</div>
-											)}
-										</div>
-									)}
-									<div className="flex-1 min-w-[200px] w-full sm:w-auto">
-										<div className="max-w-[300px]">
-											<p className="text-zinc-600 font-medium truncate">
-												{file.name}
-											</p>
-											<p className="text-zinc-400 text-sm">
-												{getFileSize(file.size)} MB
-											</p>
-										</div>
-									</div>
-								</div>
-							)
-						})}
-					</div>
-				) : (
-					<>
-						<div className="p-4 bg-zinc-100 rounded-full">
-							<svg
-								className="w-6 h-6 text-zinc-500"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24">
-								<path
-									strokeLinecap="round"
-									strokeLinejoin="round"
-									strokeWidth={2}
-									d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-								/>
-							</svg>
-						</div>
-						<div className="text-center">
-							{isDragActive ? (
-								<p className="text-zinc-600">
-									Drop the file here...
-								</p>
-							) : (
-								<>
+							</div>
+							<div className="text-center">
+								{isDragActive ? (
 									<p className="text-zinc-600">
-										Drag & drop{" "}
-										{acceptMultiple ? "files" : "a file"}{" "}
-										here, or click to select
+										Drop the file here...
 									</p>
-									<p className="text-zinc-400 text-sm mt-2">
-										Supports {acceptedTypes.join(", ")} up
-										to {maxFileSize}MB
-										{maxFileCount
-											? ` (max ${maxFileCount} files)`
-											: ""}
-									</p>
-								</>
-							)}
-						</div>
-					</>
-				)}
+								) : (
+									<>
+										<p className="text-zinc-600">
+											Drag & drop{" "}
+											{acceptMultiple
+												? "files"
+												: "a file"}{" "}
+											here, or click to select
+										</p>
+										<p className="text-zinc-400 text-sm mt-2">
+											Supports {acceptedTypes.join(", ")}{" "}
+											up to {maxFileSize}MB
+											{maxFileCount
+												? ` (max ${maxFileCount} files)`
+												: ""}
+										</p>
+									</>
+								)}
+							</div>
+						</>
+					)}
+				</div>
 			</div>
 		</div>
 	)

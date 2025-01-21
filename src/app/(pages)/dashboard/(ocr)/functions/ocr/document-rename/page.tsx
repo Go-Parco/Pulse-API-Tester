@@ -12,6 +12,7 @@ import { convertPdfToBase64 } from "@/utils/pdfToBase64"
 import { usePulseAsyncExtract } from "@/hooks/usePulseAsyncExtract"
 import StepIndicator from "@/components/StepIndicator"
 import { docNameFunnel, type DocNameFunnelReturn } from "./docNameFunnel"
+import DocumentNameDisplay from "@/components/DocumentNameDisplay"
 
 const { useUploadThing: useUploadThingCore } =
 	generateReactHelpers<OurFileRouter>()
@@ -54,6 +55,9 @@ export default function DocumentRenamePage() {
 		"file" | "url" | "default"
 	>("file")
 	const [selectedFileUrl, setSelectedFileUrl] = useState<string | null>(null)
+	const [originalFileName, setOriginalFileName] = useState<string>("")
+	const [originalFileExtension, setOriginalFileExtension] =
+		useState<string>("")
 	const [fileType, setFileType] = useState<string | null>(null)
 	const [docProvider, setDocProvider] = useState<string | null>(null)
 	const [schemaData, setSchemaData] = useState<any>(null)
@@ -70,6 +74,10 @@ export default function DocumentRenamePage() {
 	const uploadFile = async (file: File): Promise<string> => {
 		setIsUploading(true)
 		handleFileSelect(file)
+		setOriginalFileName(file.name)
+		setOriginalFileExtension(
+			file.name.split(".").pop()?.toLowerCase() || ""
+		)
 		console.log("Starting upload with file:", file.name)
 
 		try {
@@ -158,6 +166,8 @@ export default function DocumentRenamePage() {
 		resetUpload()
 		setIsProcessing(false)
 		setIsUploading(false)
+		setOriginalFileName("")
+		setOriginalFileExtension("")
 	}
 
 	const handleInputTypeChange = (type: "file" | "url" | "default") => {
@@ -233,6 +243,18 @@ export default function DocumentRenamePage() {
 	const renderDocNameResults = () => {
 		if (!docNameResults) return null
 
+		const handleDownload = () => {
+			if (selectedFileUrl) {
+				const a = document.createElement("a")
+				a.href = selectedFileUrl
+				const extension = selectedFileUrl.split(".").pop() || ""
+				a.download = `${docNameResults.data?.docName}.${extension}`
+				document.body.appendChild(a)
+				a.click()
+				document.body.removeChild(a)
+			}
+		}
+
 		return (
 			<div className="p-4 bg-white rounded-lg shadow-sm space-y-4">
 				<h3 className="text-lg font-semibold mb-2">
@@ -240,19 +262,25 @@ export default function DocumentRenamePage() {
 				</h3>
 
 				{docNameResults.data && (
-					<div className="space-y-2">
-						<div className="flex">
-							<span className="w-40 font-medium">Provider:</span>
-							<p>{docNameResults.data.docProvider}</p>
+					<div className="space-y-4">
+						<div className="space-y-2">
+							<div className="flex">
+								<span className="w-40 font-medium">
+									Provider:
+								</span>
+								<p>{docNameResults.data.docProvider}</p>
+							</div>
+							<div className="flex">
+								<span className="w-40 font-medium">Type:</span>
+								<p>{docNameResults.data.docType}</p>
+							</div>
 						</div>
-						<div className="flex">
-							<span className="w-40 font-medium">Type:</span>
-							<p>{docNameResults.data.docType}</p>
-						</div>
-						<div className="flex">
-							<span className="w-40 font-medium">Name:</span>
-							<p>{docNameResults.data.docName}</p>
-						</div>
+
+						<DocumentNameDisplay
+							originalFileName={originalFileName}
+							documentName={docNameResults.data.docName}
+							fileUrl={selectedFileUrl || ""}
+						/>
 					</div>
 				)}
 
@@ -264,20 +292,22 @@ export default function DocumentRenamePage() {
 					</div>
 				)}
 
-				{docNameResults.suggestion && (
-					<div className="mt-4 p-3 bg-blue-50 rounded-md">
-						<p className="font-medium mb-2">Suggestions:</p>
-						{docNameResults.suggestion.docProvider && (
-							<p>
-								Provider:{" "}
-								{docNameResults.suggestion.docProvider}
-							</p>
-						)}
-						{docNameResults.suggestion.docType && (
-							<p>Type: {docNameResults.suggestion.docType}</p>
-						)}
-					</div>
-				)}
+				{docNameResults.suggestion &&
+					(docNameResults.suggestion.docProvider ||
+						docNameResults.suggestion.docType) && (
+						<div className="mt-4 p-3 bg-blue-50 rounded-md">
+							<p className="font-medium mb-2">Suggestions:</p>
+							{docNameResults.suggestion.docProvider && (
+								<p>
+									Provider:{" "}
+									{docNameResults.suggestion.docProvider}
+								</p>
+							)}
+							{docNameResults.suggestion.docType && (
+								<p>Type: {docNameResults.suggestion.docType}</p>
+							)}
+						</div>
+					)}
 
 				{docNameResults.manualReview && (
 					<div className="mt-4 p-3 bg-yellow-50 rounded-md">
