@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/toaster"
 import { Toaster as SonnerToaster } from "@/components/ui/sonner"
 import "./styles/globals.css"
 import { TRPCProvider } from "./providers"
+import { NuqsAdapter } from "nuqs/adapters/next/app"
 
 const geistSans = Geist({
 	variable: "--font-geist-sans",
@@ -29,7 +30,9 @@ export default function RootLayout({
 		<html lang="en" className="light">
 			<body
 				className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-				<TRPCProvider>{children}</TRPCProvider>
+				<TRPCProvider>
+					<NuqsAdapter>{children}</NuqsAdapter>
+				</TRPCProvider>
 				<Toaster />
 				<SonnerToaster />
 			</body>
