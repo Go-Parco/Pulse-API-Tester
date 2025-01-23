@@ -11,6 +11,7 @@ import { BsFileEarmarkPdfFill } from "react-icons/bs"
 import { AcceptedFileType } from "@/types/FileTypes"
 import { CustomRadioGroup, CustomRadioOption } from "./customRadio"
 import { getFileIcon } from "./fileUploader"
+import { convertPdfToBase64 } from "@/utils/pdfToBase64"
 
 interface FileSourceSelectorProps {
 	onSubmit: (data: {
@@ -23,6 +24,7 @@ interface FileSourceSelectorProps {
 	accept?: AcceptedFileType[]
 	multiple?: boolean
 	maxFileCount?: number
+	convertPDFToBase64?: boolean
 	onInputTypeChange?: (type: "file" | "url" | "default") => void
 	onReset?: () => void
 }
@@ -34,6 +36,7 @@ const FileSourceSelector: React.FC<FileSourceSelectorProps> = ({
 	fileInputRef,
 	defaultFileUrl = "https://lh3.googleusercontent.com/qnaJEbFIpvsWJm2KrRI_GIvz1yZdXntgEsCZxy-1pVZi244bCk1RFwdk0ZBRmmvdHiUl6sIa_tsmskL5WLKiigp2AMsIIxinOJNf39qCmacViRGXIOY",
 	accept,
+	convertPDFToBase64 = false,
 	multiple = false,
 	maxFileCount,
 	onInputTypeChange,
@@ -55,11 +58,20 @@ const FileSourceSelector: React.FC<FileSourceSelectorProps> = ({
 		onInputTypeChange?.(inputType)
 	}, [inputType, onInputTypeChange])
 
-	const handleSubmit = (e: React.FormEvent) => {
+	const handleSubmit = async (e: React.FormEvent) => {
+		const fileExt = url.split(".").pop()?.toLowerCase()
 		e.preventDefault()
 		switch (inputType) {
 			case "file":
-				onSubmit({ type: "file", value: files })
+				if (convertPDFToBase64 && fileExt === "pdf") {
+					const base64 = await convertPdfToBase64(files[0])
+					onSubmit({
+						type: "file",
+						value: base64?.toString() ?? null,
+					})
+				} else {
+					onSubmit({ type: "file", value: files })
+				}
 				break
 			case "url":
 				const result = urlSchema.safeParse(url)

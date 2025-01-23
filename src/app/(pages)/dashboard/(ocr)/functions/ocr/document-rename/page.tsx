@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Image from "next/image"
 import { useUploadThing } from "@/hooks/useUploadThing"
 import { useNyckelDocumentIdentifier } from "@/hooks/useNyckelAPIs"
 import FileSourceSelector from "@/components/myComponents/fileSourceSelector"
@@ -13,7 +14,30 @@ import { usePulseAsyncExtract } from "@/hooks/usePulseAsyncExtract"
 import StepIndicator from "@/components/StepIndicator"
 import { docNameFunnel, type DocNameFunnelReturn } from "./docNameFunnel"
 import DocumentNameDisplay from "@/components/DocumentNameDisplay"
-
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogHeader,
+	DialogTitle,
+	DialogTrigger,
+} from "@/components/ui/dialog"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardFooter,
+	CardHeader,
+	CardTitle,
+} from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import FunnelLogic from "@/documentation/custom_functions/OCR_File_Rename/OCR_File_Rename_Logic.jpg"
+import Link from "next/link"
+import { CodeExcerpt } from "@/components/myComponents/CodeExcerpt"
+import { env } from "@/env"
+import { Step, StepState } from "@/components/StepIndicator"
 const { useUploadThing: useUploadThingCore } =
 	generateReactHelpers<OurFileRouter>()
 
@@ -23,6 +47,17 @@ const DEFAULT_FILE_URL =
 const GetFormattedFileName = (fileName: string) => {
 	return fileName.replace(/\s+/g, "_")
 }
+
+const PROCESSING_STEPS: Step[] = [
+	{ id: "uploading", label: "Uploading File" },
+	{ id: "uploaded", label: "File Uploaded" },
+	{ id: "identifying", label: "Identifying Document Type" },
+	{ id: "reading", label: "Reading Document" },
+	{ id: "extracting", label: "Extracting Text" },
+	{ id: "renaming", label: "Renaming File" },
+	{ id: "complete", label: "Complete" },
+	{ id: "error", label: "Error Occurred" },
+]
 
 export default function DocumentRenamePage() {
 	const { startUpload } = useUploadThingCore("imageUploader")
@@ -59,10 +94,16 @@ export default function DocumentRenamePage() {
 	const [originalFileExtension, setOriginalFileExtension] =
 		useState<string>("")
 	const [fileType, setFileType] = useState<string | null>(null)
-	const [docProvider, setDocProvider] = useState<string | null>(null)
 	const [schemaData, setSchemaData] = useState<any>(null)
 	const [docNameResults, setDocNameResults] =
 		useState<DocNameFunnelReturn | null>(null)
+	const [stepState, setStepState] = useState<StepState>({
+		currentStepId: "",
+		completedStepIds: [],
+	})
+
+	const MIN_STEP_DELAY = 800
+	const MIN_ACTIVE_DELAY = 500
 
 	// Define expected schema
 	const expectedSchema = {
@@ -71,20 +112,50 @@ export default function DocumentRenamePage() {
 		document_name: "string",
 	}
 
+	// Update step state helper
+	const updateStep = (stepId: string) => {
+		setStepState((prev) => ({
+			currentStepId: stepId,
+			completedStepIds: [
+				...prev.completedStepIds,
+				prev.currentStepId,
+			].filter(Boolean),
+		}))
+	}
+
+	const updateStepWithDelay = async (stepId: string) => {
+		updateStep(stepId)
+		await new Promise((resolve) => setTimeout(resolve, MIN_STEP_DELAY))
+	}
+
 	const uploadFile = async (file: File): Promise<string> => {
 		setIsUploading(true)
 		handleFileSelect(file)
+		const extension = file.name.split(".").pop()?.toLowerCase() || ""
+		if (!extension) {
+			throw new Error("File has no extension")
+		}
 		setOriginalFileName(file.name)
-		setOriginalFileExtension(
-			file.name.split(".").pop()?.toLowerCase() || ""
+		setOriginalFileExtension(`.${extension}`)
+		console.log(
+			"Starting upload with file:",
+			file.name,
+			"extension:",
+			extension
 		)
-		console.log("Starting upload with file:", file.name)
 
 		try {
 			const uploadResponse = await startUpload([file])
 			const url = uploadResponse?.[0]?.url
 			console.log("Upload complete, URL:", url)
 			if (!url) throw new Error("Upload failed - no URL returned")
+
+			// Create a blob from the uploaded file to handle downloads
+			const response = await fetch(url)
+			const blob = await response.blob()
+			const objectUrl = URL.createObjectURL(blob)
+			setSelectedFileUrl(objectUrl)
+
 			return url
 		} catch (uploadError) {
 			console.log(
@@ -108,6 +179,8 @@ export default function DocumentRenamePage() {
 				}
 			}
 			throw uploadError
+		} finally {
+			setIsUploading(false)
 		}
 	}
 
@@ -140,6 +213,17 @@ export default function DocumentRenamePage() {
 		return undefined
 	}
 
+	const setStepWithMinimumActiveTime = async (
+		stepId: string,
+		completedSteps: string[] = []
+	) => {
+		setStepState((prev) => ({
+			currentStepId: stepId,
+			completedStepIds: [...prev.completedStepIds, ...completedSteps],
+		}))
+		await new Promise((resolve) => setTimeout(resolve, MIN_ACTIVE_DELAY))
+	}
+
 	const handleFileSubmit = async (data: {
 		type: "file" | "url" | "default"
 		value: string | File[] | null
@@ -147,13 +231,83 @@ export default function DocumentRenamePage() {
 		if (isUploading || isProcessing) return
 
 		try {
+			// Start upload
+			setStepState({
+				currentStepId: "uploading",
+				completedStepIds: [],
+			})
+
 			const url = await getDocumentUrl(data)
-			if (url) {
-				setSelectedFileUrl(url)
-				await processDocument(url)
+			if (!url) {
+				throw new Error("Failed to get document URL")
 			}
+
+			// Upload complete
+			await setStepWithMinimumActiveTime("uploaded", ["uploading"])
+			await new Promise((resolve) => setTimeout(resolve, MIN_STEP_DELAY))
+
+			// Start identification
+			await setStepWithMinimumActiveTime("identifying", ["uploaded"])
+			setSelectedFileUrl(url)
+			setIsProcessing(true)
+			await identifyDocument(url)
+
+			// Document identified
+			await setStepWithMinimumActiveTime("reading", ["identifying"])
+			await new Promise((resolve) => setTimeout(resolve, MIN_STEP_DELAY))
+
+			// Start extracting
+			await setStepWithMinimumActiveTime("extracting", ["reading"])
+			await startAsyncExtraction(url)
+
+			// Wait for extraction to complete
+			while (!extractedData) {
+				await new Promise((resolve) => setTimeout(resolve, 500))
+			}
+
+			// Start renaming if needed
+			if (docNameResults?.data?.docName) {
+				await setStepWithMinimumActiveTime("renaming", ["extracting"])
+
+				// Call the rename API
+				try {
+					const response = await fetch(
+						"/api/uploadthing/renameUpload",
+						{
+							method: "POST",
+							headers: {
+								"Content-Type": "application/json",
+							},
+							body: JSON.stringify({
+								fileKey: url.split("/").pop(),
+								newName: docNameResults.data.docName,
+							}),
+						}
+					)
+
+					if (!response.ok) {
+						throw new Error("Failed to rename file")
+					}
+
+					await new Promise((resolve) =>
+						setTimeout(resolve, MIN_STEP_DELAY)
+					)
+				} catch (error) {
+					console.error("Error renaming file:", error)
+					throw error
+				}
+			}
+
+			// Complete
+			await setStepWithMinimumActiveTime("complete", [
+				docNameResults?.data?.docName ? "renaming" : "extracting",
+			])
 		} catch (error) {
 			console.error("Error processing document:", error)
+			setStepState({
+				currentStepId: "error",
+				completedStepIds: [],
+			})
 		} finally {
 			setIsUploading(false)
 			setIsProcessing(false)
@@ -167,75 +321,145 @@ export default function DocumentRenamePage() {
 		setIsProcessing(false)
 		setIsUploading(false)
 		setOriginalFileName("")
-		setOriginalFileExtension("")
+		// setOriginalFileExtension("")
 	}
 
 	const handleInputTypeChange = (type: "file" | "url" | "default") => {
 		setSelectedInputType(type)
+		// setOriginalFileExtension("")
 		handleReset()
 	}
 
 	useEffect(() => {
 		if (documentTypeResult) {
 			setFileType(documentTypeResult.documentType)
+			updateStep("identifying")
 		}
 	}, [documentTypeResult])
 
 	useEffect(() => {
-		if (extractedData?.schema && fileType) {
-			console.log("=== PULSE EXTRACTION DATA ===")
-			console.log("Schema:", extractedData.schema)
-			console.log("Text:", extractedData.text)
-			console.log("Tables:", extractedData.tables)
-			console.log("==========================")
+		if (extractedData?.schema) {
+			setSchemaData(extractedData.schema)
+			// Only move to the next step if we have valid schema data
+			const schema = extractedData.schema
+			if (
+				typeof schema.document_comes_from === "string" &&
+				typeof schema.document_kind === "string" &&
+				typeof schema.document_name === "string"
+			) {
+				updateStep("extracting")
 
-			const schema = {
-				document_comes_from:
-					extractedData.schema.document_comes_from || "",
-				document_kind: extractedData.schema.document_kind || "",
-				document_name: extractedData.schema.document_name || "",
-				pay_plan: extractedData.schema.pay_plan,
-			}
-			setSchemaData(schema)
-
-			console.log("=== DOC NAME FUNNEL INPUT ===")
-			console.log("Schema:", schema)
-			console.log("Doc Type:", fileType)
-			console.log("==========================")
-
-			const results = docNameFunnel({
-				props: {
-					data: {
-						schemaData: schema,
-						docType: fileType,
+				// Process the document name after we have valid schema
+				const results = docNameFunnel({
+					props: {
+						data: {
+							schemaData: {
+								document_comes_from: schema.document_comes_from,
+								document_kind: schema.document_kind,
+								document_name: schema.document_name,
+								pay_plan: schema.pay_plan,
+							},
+							docType: fileType || "",
+							originalExtension: originalFileExtension,
+						},
 					},
-				},
+				})
+				setDocNameResults(results)
+
+				// Only proceed with rename if we have valid data and no errors
+				if (results.data && !results.error && !results.manualReview) {
+					updateStep("renaming")
+					// Trigger the rename API call here
+					handleRenameDocument(results.data)
+				} else {
+					// If there are errors or manual review is needed, stop at extracting
+					updateStep("extracting")
+				}
+			}
+		}
+	}, [extractedData, fileType, originalFileExtension])
+
+	const handleRenameDocument = async (
+		renameData: DocNameFunnelReturn["data"]
+	) => {
+		if (!renameData || !renameData.docName || !renameData.docProvider) {
+			console.error("Invalid rename data:", renameData)
+			updateStep("error")
+			return
+		}
+
+		try {
+			console.log("Attempting to rename document:", {
+				originalName: originalFileName,
+				newName: renameData.docName,
 			})
 
-			console.log("=== DOC NAME FUNNEL RESULTS ===")
-			console.log(results)
-			console.log("==============================")
+			const response = await fetch("/api/uploadthing/rename", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					originalName: originalFileName,
+					newName: renameData.docName,
+				}),
+			})
 
-			setDocNameResults(results)
+			const data = await response.json()
+			console.log("Rename API response:", data)
+
+			if (!response.ok) {
+				throw new Error(data.error || "Failed to rename document")
+			}
+
+			updateStep("complete")
+		} catch (error) {
+			console.error("Error renaming document:", error)
+			updateStep("error")
 		}
-	}, [extractedData, fileType])
+	}
 
 	const renderSchemaData = () => {
 		if (!schemaData) return null
 
+		// Group and order the fields
+		const fieldGroups = {
+			primary: ["document_name", "document_kind"],
+			secondary: ["document_comes_from", "pay_plan"],
+		}
+
+		const renderField = (key: string, value: string) => (
+			<div key={key} className="p-3 bg-gray-50 rounded-md">
+				<label className="text-sm text-gray-500 block mb-1 capitalize">
+					{key.replace(/_/g, " ")}
+				</label>
+				<p className="text-base font-medium">{value || "—"}</p>
+			</div>
+		)
+
 		return (
-			<div className="p-4 bg-white rounded-lg shadow-sm space-y-2">
-				<h3 className="text-lg font-semibold mb-4">Extracted Schema</h3>
-				{(Object.entries(schemaData) as [string, string][])
-					.filter(([_, value]) => value !== undefined && value !== "")
-					.map(([key, value]) => (
-						<div key={key} className="flex">
-							<span className="w-40 font-medium capitalize">
-								{key.replace(/_/g, " ")}:
-							</span>
-							<p>{value}</p>
-						</div>
-					))}
+			<div className="p-6 bg-white rounded-lg shadow-sm space-y-6">
+				<h3 className="text-lg font-semibold">Extracted Information</h3>
+
+				<div className="space-y-4">
+					{/* Primary Fields */}
+					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+						{fieldGroups.primary.map(
+							(key) =>
+								schemaData[key] &&
+								renderField(key, schemaData[key])
+						)}
+					</div>
+
+					{/* Secondary Fields */}
+					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+						{fieldGroups.secondary.map(
+							(key) =>
+								schemaData[key] &&
+								renderField(key, schemaData[key])
+						)}
+					</div>
+				</div>
 			</div>
 		)
 	}
@@ -243,36 +467,28 @@ export default function DocumentRenamePage() {
 	const renderDocNameResults = () => {
 		if (!docNameResults) return null
 
-		const handleDownload = () => {
-			if (selectedFileUrl) {
-				const a = document.createElement("a")
-				a.href = selectedFileUrl
-				const extension = selectedFileUrl.split(".").pop() || ""
-				a.download = `${docNameResults.data?.docName}.${extension}`
-				document.body.appendChild(a)
-				a.click()
-				document.body.removeChild(a)
-			}
-		}
-
 		return (
-			<div className="p-4 bg-white rounded-lg shadow-sm space-y-4">
-				<h3 className="text-lg font-semibold mb-2">
-					Document Name Results
-				</h3>
+			<div className="p-6 bg-white rounded-lg shadow-sm space-y-6">
+				<h3 className="text-lg font-semibold">Document Name Results</h3>
 
 				{docNameResults.data && (
-					<div className="space-y-4">
-						<div className="space-y-2">
-							<div className="flex">
-								<span className="w-40 font-medium">
-									Provider:
-								</span>
-								<p>{docNameResults.data.docProvider}</p>
+					<div className="space-y-6">
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+							<div className="p-3 bg-gray-50 rounded-md">
+								<label className="text-sm text-gray-500 block mb-1">
+									Provider
+								</label>
+								<p className="text-base font-medium">
+									{docNameResults.data.docProvider || "—"}
+								</p>
 							</div>
-							<div className="flex">
-								<span className="w-40 font-medium">Type:</span>
-								<p>{docNameResults.data.docType}</p>
+							<div className="p-3 bg-gray-50 rounded-md">
+								<label className="text-sm text-gray-500 block mb-1">
+									Type
+								</label>
+								<p className="text-base font-medium">
+									{docNameResults.data.docType || "—"}
+								</p>
 							</div>
 						</div>
 
@@ -285,8 +501,9 @@ export default function DocumentRenamePage() {
 				)}
 
 				{docNameResults.error && (
-					<div className="mt-4 p-3 bg-red-50 rounded-md">
-						<p className="text-red-600">
+					<div className="p-4 bg-red-50 rounded-md">
+						<p className="text-red-600 font-medium">Error</p>
+						<p className="text-sm text-red-600 mt-1">
 							{docNameResults.error.message}
 						</p>
 					</div>
@@ -295,24 +512,42 @@ export default function DocumentRenamePage() {
 				{docNameResults.suggestion &&
 					(docNameResults.suggestion.docProvider ||
 						docNameResults.suggestion.docType) && (
-						<div className="mt-4 p-3 bg-blue-50 rounded-md">
-							<p className="font-medium mb-2">Suggestions:</p>
-							{docNameResults.suggestion.docProvider && (
-								<p>
-									Provider:{" "}
-									{docNameResults.suggestion.docProvider}
-								</p>
-							)}
-							{docNameResults.suggestion.docType && (
-								<p>Type: {docNameResults.suggestion.docType}</p>
-							)}
+						<div className="p-4 bg-blue-50 rounded-md">
+							<p className="text-blue-600 font-medium mb-2">
+								Suggestions
+							</p>
+							<div className="space-y-2">
+								{docNameResults.suggestion.docProvider && (
+									<div>
+										<label className="text-sm text-blue-500 block">
+											Provider
+										</label>
+										<p className="text-blue-700">
+											{
+												docNameResults.suggestion
+													.docProvider
+											}
+										</p>
+									</div>
+								)}
+								{docNameResults.suggestion.docType && (
+									<div>
+										<label className="text-sm text-blue-500 block">
+											Type
+										</label>
+										<p className="text-blue-700">
+											{docNameResults.suggestion.docType}
+										</p>
+									</div>
+								)}
+							</div>
 						</div>
 					)}
 
 				{docNameResults.manualReview && (
-					<div className="mt-4 p-3 bg-yellow-50 rounded-md">
-						<p className="text-yellow-600">
-							Manual review required
+					<div className="p-4 bg-yellow-50 rounded-md">
+						<p className="text-yellow-600 font-medium">
+							Manual Review Required
 						</p>
 					</div>
 				)}
@@ -320,16 +555,190 @@ export default function DocumentRenamePage() {
 		)
 	}
 
+	const FileExtNotes = `# API & Usage & File Notes
+
+## Nyckel API - Document Identifier (Public Classifier)
+- Takes in only an image file URL and returns the document type and confidence level.
+- Takes in the file URL or a file directly.
+- So long as the url or the file is an image, the Nyckel API will work. If the file is a pdf, 
+then it must be converted to a base64 string before being passed to the Nyckel API.
+
+## Pulse API - Extract File Async
+- Takes in a file URL (Accepts both pdf & image) and returns the extracted data 
+from the document.
+
+> Not all URLs will specity the file type. For instance, a url that all it contains is the 
+> pdf may not have the file extension in the url. In this case, the file extension will 
+> be unknown and the Pulse API will not be able to extract the data from the document.
+> that we can only verify the contents of the url by whether the API returns an error or not.
+
+For instance, the file that is uploaded will either be a pdf or an image (as these are the 
+only 2 file types that are accepted by the Nyckel API). 
+`
+
 	return (
-		<div className="space-y-8">
+		<div className="space-y-8 flex-1 w-full">
 			<div className="flex justify-between items-center">
 				<div>
 					<h1 className="text-3xl font-bold mb-2">
 						Document Rename Page
 					</h1>
-					<p className="text-muted-foreground">
-						Upload a document to identify its type using Nyckel's
-						public document-type-classifier API.
+					<p className="text-muted-foreground pl-2 w-2/3">
+						Upload a document to rename it to a standard format $"
+						{"{"}DocType{"}"}"_"{"{"}DocProvider{"}"}"_"${"{"}
+						FileExtension{"}"}. This page demonstrates the usage of
+						both the Nyckel API in tandom with the Pulse API to
+						discipher the file type and provider before providing a
+						file rename update or suggestion. <br />
+						<br />
+						To better understand the client-side logic behind how
+						each api is utilized, as well as the funnel logic, check
+						on the file here:
+						<br />
+						<br />
+						<Dialog>
+							<DialogTrigger className="bg-black text-white px-4 flex-1 py-1 rounded-md cursor-pointer">
+								Logic Preview
+							</DialogTrigger>
+							<DialogContent className="w-[calc(100vw-3rem)] h-[calc(100vh-3rem)] max-w-[calc(100vw-3rem)] max-h-[calc(100vh-3rem)] p-6 overflow-scroll">
+								<DialogHeader>
+									<DialogTitle>Funnel Logic</DialogTitle>
+									<Tabs
+										defaultValue="account"
+										className="min-w-[400px]">
+										<TabsList className="grid w-full grid-cols-2">
+											<TabsTrigger value="funnel">
+												Funnel Logic
+											</TabsTrigger>
+											<TabsTrigger value="file_ext">
+												File Extention Logic
+											</TabsTrigger>
+										</TabsList>
+										<TabsContent
+											value="funnel"
+											className="">
+											<Card className="">
+												<CardHeader>
+													<CardTitle>
+														Funnel Logic Diagram
+													</CardTitle>
+													<CardDescription>
+														Funnel Logic ensuring
+														that the file has been
+														checked in 2 seperate
+														ways before being
+														certain of a file type /
+														provider.
+													</CardDescription>
+												</CardHeader>
+												<CardContent className="">
+													<Image
+														src={FunnelLogic}
+														width={1200}
+														height={400}
+														alt="Funnel Logic Diagram"
+														className="rounded-lg"
+													/>
+												</CardContent>
+											</Card>
+										</TabsContent>
+										<TabsContent value="file_ext">
+											<Card>
+												<CardHeader>
+													<CardTitle>
+														File Extension Logic
+													</CardTitle>
+													<CardDescription>
+														Provided below is the
+														links to test each api
+														outside of this
+														application.
+														<br />
+														<br />
+														<ul>
+															<li className="list-disc ml-4 hover:underline ease-in duration-200 transition-all underline-offset-2">
+																<Link
+																	href="https://www.nyckel.com/pretrained-classifiers/document-types-identifier/"
+																	className="text-sky-500 hover:text-sky-600 text-lg"
+																	target="_blank"
+																	rel="noreferrer">
+																	Nyckel API -
+																	Document
+																	Identifier
+																	(Public
+																	Classifier)
+																	Demo Link
+																</Link>
+															</li>
+															<li className="list-disc ml-4 hover:underline ease-in duration-200 transition-all underline-offset-2">
+																<a
+																	href="https://docs.runpulse.com/api-reference/endpoint/extract_async"
+																	className="text-sky-500 hover:text-sky-600 text-lg"
+																	target="_blank"
+																	rel="noreferrer">
+																	Pulse API -
+																	Extract File
+																	Async Demo
+																	Link
+																</a>
+															</li>
+														</ul>
+														<br />
+														<p>
+															To use the Pulse
+															API, click on the
+															blue "TRY IT". You
+															will need to copy
+															this api key into
+															the API Key field to
+															use it.
+														</p>
+														<CodeExcerpt
+															title="Pulse API Key"
+															className="w-full flex"
+															theme="dark"
+															copyContent={
+																env.NEXT_PUBLIC_PULSE_API_KEY
+															}
+															content={`PULSE_API_KEY='${env.NEXT_PUBLIC_PULSE_API_KEY}'`}
+															language="env"
+														/>
+														<CodeExcerpt
+															title="Notes"
+															hideCopy={true}
+															className="w-full flex"
+															copyContent={
+																env.NEXT_PUBLIC_NYCKEL_API_KEY
+															}
+															content={
+																FileExtNotes
+															}
+															language="markdown"
+														/>
+													</CardDescription>
+												</CardHeader>
+												<CardContent className="space-y-2">
+													<div className="space-y-1">
+														<CodeExcerpt
+															title="Notes"
+															hideCopy={true}
+															className="w-full flex"
+															copyContent={
+																env.NEXT_PUBLIC_NYCKEL_API_KEY
+															}
+															content={
+																FileExtNotes
+															}
+															language="markdown"
+														/>
+													</div>
+												</CardContent>
+											</Card>
+										</TabsContent>
+									</Tabs>
+								</DialogHeader>
+							</DialogContent>
+						</Dialog>
 					</p>
 				</div>
 				<Button
@@ -348,6 +757,9 @@ export default function DocumentRenamePage() {
 				disabledOptions="none"
 				onInputTypeChange={handleInputTypeChange}
 			/>
+
+			<h3 className="text-lg font-semibold mb-2">Processing State:</h3>
+			<StepIndicator steps={PROCESSING_STEPS} currentState={stepState} />
 
 			{/* Upload Status */}
 			{isUploading && (
@@ -368,10 +780,6 @@ export default function DocumentRenamePage() {
 						Identifying document type...
 					</p>
 				</div>
-			)}
-
-			{isPulseProcessing && (
-				<StepIndicator currentState={extractionState} />
 			)}
 
 			{/* Error Status */}

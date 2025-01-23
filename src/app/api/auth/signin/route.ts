@@ -1,8 +1,9 @@
 import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
+import { env } from "@/env"
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD
+const ADMIN_EMAIL = env.ADMIN_EMAIL
+const ADMIN_PASSWORD = env.ADMIN_PASSWORD
 
 export async function POST(request: Request) {
 	try {
@@ -20,7 +21,7 @@ export async function POST(request: Request) {
 		const response = NextResponse.json({ success: true })
 		response.cookies.set("auth_session", "authenticated", {
 			httpOnly: true,
-			secure: process.env.NODE_ENV === "production",
+			secure: env.NEXT_PUBLIC_NODE_ENV === "production",
 			sameSite: "lax",
 			path: "/",
 			// Set cookie to expire in 24 hours

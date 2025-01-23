@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server"
 import { PULSE_API_URL } from "../config"
 import type { PulseConfig, PulseExtractResponse } from "../config"
+import { env } from "@/env"
 
 export async function POST(request: Request) {
 	try {
 		const { fileUrl, method } = await request.json()
-		const apiKey = process.env.PULSE_API_KEY
+		const apiKey = env.PULSE_API_KEY
 
 		if (!apiKey) {
 			throw new Error("PULSE_API_KEY is not configured")

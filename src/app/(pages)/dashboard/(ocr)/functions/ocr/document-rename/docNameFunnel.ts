@@ -11,6 +11,7 @@ type DocNameFunnelProps = {
 			pay_plan?: string
 		}
 		docType: string
+		originalExtension: string
 	}
 }
 
@@ -19,6 +20,7 @@ export type DocNameFunnelReturn = {
 		docProvider: string
 		docType: string
 		docName: string
+		extension: string
 	} | null
 	error: {
 		message: string | null
@@ -35,39 +37,43 @@ const AgencyLabelConversion: Record<
 	{ display: string; matches: string[] }
 > = {
 	DOD: {
-		display: "department of defense",
+		display: "DOD",
 		matches: ["department of defense"],
 	},
-	DOE: {
-		display: "department of energy",
+	DOEd: {
+		display: "DOE(d)",
+		matches: ["department of education"],
+	},
+	DOEn: {
+		display: "DOE(n)",
 		matches: ["department of energy"],
 	},
 	USDA: {
-		display: "rural development",
-		matches: ["rural development"],
+		display: "USDA",
+		matches: ["rural development", "employee personal page"],
 	},
 	TVA: {
-		display: "tennessee valley authority",
+		display: "TVA",
 		matches: ["tennessee valley authority"],
 	},
 	GSA: {
-		display: "general services administration",
+		display: "GSA",
 		matches: ["general services administration"],
 	},
 	USPS: {
-		display: "united states postal service",
+		display: "USPS",
 		matches: ["payroll system", "payroll department", "payloc finance"],
 	},
 	IRS: {
-		display: "internal revenue service",
-		matches: ["internal revenue service"],
+		display: "IRS",
+		matches: ["internal revenue service", "irs ogden payroll"],
 	},
 	DOS: {
-		display: "department of state",
+		display: "DOS",
 		matches: ["department of state"],
 	},
 	USAID: {
-		display: "u.s. agency for international development",
+		display: "USAID",
 		matches: [
 			"u.s. agency for international development",
 			"agency for international development",
@@ -77,20 +83,40 @@ const AgencyLabelConversion: Record<
 }
 
 const BankLabelConversion = {
-	Charles_Schwab: "charles schwab",
-	Edward_Jones: "edward jones",
-	Scudder_Investor_Relations: "scudder investor relations",
+	Charles_Schwab: { display: "Charles Schwab", matches: ["charles schwab"] },
+	edward_Jones: { display: "Edward Jones", matches: ["edward jones"] },
+	Scudder_Investor_Relations: {
+		display: "Scudder",
+		matches: ["scudder investor relations"],
+	},
 }
 
 const formatDocName = (
 	docType: string,
 	docProvider: string,
+	extension: string,
 	abbreviation?: string
 ) => {
-	if (abbreviation) {
-		return `${docType} - ${abbreviation}`
-	}
-	return `${docType} - ${docProvider}`
+	console.log("formatDocName inputs:", {
+		docType,
+		docProvider,
+		extension,
+		abbreviation,
+	})
+	const baseName = abbreviation
+		? `${docType} - ${abbreviation}`
+		: `${docType} - ${docProvider}`
+
+	// Clean up the extension to ensure it's properly formatted
+	const cleanExtension = extension.trim()
+		? extension.startsWith(".")
+			? extension
+			: `.${extension}`
+		: ""
+
+	const fullName = `${baseName}${cleanExtension}`
+	console.log("formatDocName output:", fullName)
+	return { name: fullName, extension: cleanExtension }
 }
 
 const processEarningsStatements = (
@@ -101,12 +127,14 @@ const processEarningsStatements = (
 		document_name: string
 		document_kind: string
 	},
+	extension: string,
 	setSuggestion: (suggestion: DocNameFunnelReturn["suggestion"]) => void,
 	setDocProvider: (provider: string) => void,
 	setError: (error: DocNameFunnelReturn["error"]) => void,
 	setDocName: (name: string) => void,
 	setManualReview: (manualReview: boolean) => void,
-	setConfirmedDocType: (type: string) => void
+	setConfirmedDocType: (type: string) => void,
+	setExtension: (ext: string) => void
 ) => {
 	const comesFrom = schemaData.document_comes_from.toLowerCase()
 	console.log("=== AGENCY MATCHING DEBUG ===")
@@ -136,7 +164,18 @@ const processEarningsStatements = (
 	if (matchingAgency) {
 		const [key, value] = matchingAgency
 		setDocProvider(value.display)
-		setDocName(formatDocName("Earnings Statement", value.display, key))
+		const { name, extension: cleanExtension } = formatDocName(
+			"Earnings Statement",
+			value.display,
+			extension,
+			key
+		)
+		console.log("Creating document name with extension:", {
+			docName: name,
+			extension: cleanExtension,
+		})
+		setDocName(name)
+		setExtension(cleanExtension)
 		setConfirmedDocType("Earnings Statement")
 	} else {
 		setError({
@@ -157,6 +196,7 @@ const processInvoiceDocs = (
 		document_name: string
 		document_kind: string
 	},
+	extension: string,
 	setDocProvider: (provider: string) => void,
 	setDocType: (type: string) => void,
 	setDocName: (name: string) => void,
@@ -178,7 +218,11 @@ const processInvoiceDocs = (
 		setDocProvider(schemaData.document_comes_from)
 		setDocType("Voided Check")
 		setDocName(
-			formatDocName("Voided Check", schemaData.document_comes_from)
+			formatDocName(
+				"Voided Check",
+				schemaData.document_comes_from,
+				extension
+			).name
 		)
 	} else {
 		// Try to match the bank name
@@ -186,7 +230,7 @@ const processInvoiceDocs = (
 			([key, value]) => {
 				const sourceMatch =
 					schemaData.document_comes_from.toLowerCase() ===
-					value.toLowerCase()
+					value.display.toLowerCase()
 				const keyMatch = schemaData.document_comes_from
 					.toLowerCase()
 					.includes(key.toLowerCase().replace("_", " "))
@@ -201,10 +245,12 @@ const processInvoiceDocs = (
 		console.log("Bank match result:", bankMatch)
 
 		if (bankMatch) {
-			const [key, value] = bankMatch
-			setDocProvider(value)
+			const [key, { display }] = bankMatch
+			setDocProvider(display)
 			setDocType("Account Statement")
-			setDocName(formatDocName("Account Statement", value))
+			setDocName(
+				formatDocName("Account Statement", display, extension).name
+			)
 		} else {
 			setError({
 				message: `Could not find a provider based upon the document_comes_from or document_name. Comes From:${schemaData.document_comes_from}, Name:${schemaData.document_name}, Kind:${schemaData.document_kind}, Type:${docType}`,
@@ -224,10 +270,11 @@ export const docNameFunnel = ({
 }: {
 	props: DocNameFunnelProps
 }): DocNameFunnelReturn => {
-	const { schemaData, docType } = props.data
+	const { schemaData, docType, originalExtension } = props.data
 	let docProvider = ""
 	let docName = ""
 	let confirmedDocType = ""
+	let extension = originalExtension
 	let error: DocNameFunnelReturn["error"] = null
 	let manualReview = false
 	let suggestion: DocNameFunnelReturn["suggestion"] = {
@@ -247,6 +294,10 @@ export const docNameFunnel = ({
 		confirmedDocType = type
 	}
 
+	const setExtension = (ext: string) => {
+		extension = ext
+	}
+
 	const setError = (err: DocNameFunnelReturn["error"]) => {
 		error = err
 	}
@@ -261,8 +312,10 @@ export const docNameFunnel = ({
 
 	// First check if it's a budget or specification type, or if the document kind/name indicates it's an earnings statement
 	if (
-		docType === "budget" ||
-		docType === "specification" ||
+		docType.toLowerCase() === "budget" ||
+		docType.toLowerCase() === "specification" ||
+		docType.toLowerCase() === "pay statement" ||
+		docName.toLowerCase() === "pay information" ||
 		schemaData.document_kind.toLowerCase().includes("earnings") ||
 		schemaData.document_kind.toLowerCase().includes("leave") ||
 		schemaData.document_name.toLowerCase().includes("earnings") ||
@@ -273,18 +326,21 @@ export const docNameFunnel = ({
 			schemaData.document_name,
 			docType,
 			schemaData,
+			originalExtension,
 			setSuggestion,
 			setDocProvider,
 			setError,
 			setDocName,
 			setManualReview,
-			setConfirmedDocType
+			setConfirmedDocType,
+			setExtension
 		)
 		return {
 			data: {
 				docProvider,
 				docType: confirmedDocType,
 				docName,
+				extension,
 			},
 			manualReview,
 			error,
@@ -296,6 +352,7 @@ export const docNameFunnel = ({
 	processInvoiceDocs(
 		docType,
 		schemaData,
+		originalExtension,
 		setDocProvider,
 		setConfirmedDocType,
 		setDocName,
@@ -309,6 +366,7 @@ export const docNameFunnel = ({
 			docProvider,
 			docType: confirmedDocType,
 			docName,
+			extension,
 		},
 		manualReview,
 		error,

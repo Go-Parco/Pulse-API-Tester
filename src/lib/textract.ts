@@ -1,9 +1,10 @@
 import { TextractClient } from "@aws-sdk/client-textract"
+import { env } from "@/env"
 
-export const client = new TextractClient({
-	region: process.env.AWS_REGION || "us-east-1",
+export const textractClient = new TextractClient({
+	region: env.AWS_REGION,
 	credentials: {
-		accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
-		secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
+		accessKeyId: env.AWS_ACCESS_KEY_ID,
+		secretAccessKey: env.AWS_SECRET_ACCESS_KEY,
 	},
 })

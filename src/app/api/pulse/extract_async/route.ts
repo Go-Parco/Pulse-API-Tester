@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { PULSE_API_URL } from "../config"
 import type { PulseConfig } from "../config"
+import { env } from "@/env"
 
 // Define the default schema according to the API docs
 const DEFAULT_SCHEMA = {
@@ -15,7 +16,7 @@ type Schema = Record<string, string>
 export async function POST(request: Request) {
 	try {
 		const { fileUrl, schema } = await request.json()
-		const apiKey = process.env.PULSE_API_KEY
+		const apiKey = env.PULSE_API_KEY
 
 		if (!apiKey) {
 			throw new Error("PULSE_API_KEY is not configured")

@@ -10,7 +10,10 @@ export function useNyckelDocumentIdentifier() {
 	const [error, setError] = useState<string | null>(null)
 	const [result, setResult] = useState<DocumentTypeResult | null>(null)
 
-	const identifyDocument = async (documentUrl: string) => {
+	const identifyDocument = async (
+		input: string,
+		isBase64: boolean = false
+	) => {
 		setIsIdentifying(true)
 		setError(null)
 		setResult(null)
@@ -23,7 +26,7 @@ export function useNyckelDocumentIdentifier() {
 					headers: {
 						"Content-Type": "application/json",
 					},
-					body: JSON.stringify({ url: documentUrl }),
+					body: JSON.stringify({ url: input, isBase64 }),
 				}
 			)
 

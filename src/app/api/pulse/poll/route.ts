@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server"
 import { PULSE_API_URL } from "../config"
 import type { PulseExtractResponse } from "../config"
+import { env } from "@/env"
 
 export async function GET(request: Request) {
 	try {
 		const { searchParams } = new URL(request.url)
 		const jobId = searchParams.get("jobId")
-		const apiKey = process.env.PULSE_API_KEY
+		const apiKey = env.PULSE_API_KEY
 
 		if (!apiKey) {
 			throw new Error("PULSE_API_KEY is not configured")

@@ -100,7 +100,7 @@ const MockAPI = () => {
 									query,
 									reason:
 										query === "fdvv"
-											? `Query intentionally not included in the "api/mock_api/route.ts" to induce an error`
+											? "Query not supported in mock API"
 											: "No data available for this field",
 								}
 							}

@@ -3,25 +3,21 @@ import { NYCKEL_API_KEY } from "../config"
 
 export async function POST(request: Request) {
 	try {
-		const { url } = await request.json()
-		console.log("Received URL:", url)
+		const { url, isBase64 } = await request.json()
+		console.log("Received input type:", isBase64 ? "base64" : "url")
 
 		if (!url) {
 			return NextResponse.json(
-				{ error: "URL is required" },
+				{ error: "URL or base64 data is required" },
 				{ status: 400 }
 			)
 		}
 
-		// Ensure the URL is properly encoded
-		const encodedUrl = encodeURI(url)
-		console.log("Encoded URL:", encodedUrl)
-
 		const nyckelPayload = {
-			data: encodedUrl,
-			contentType: "URL",
+			data: isBase64 ? url : encodeURI(url),
+			contentType: isBase64 ? "BASE64" : "URL",
 		}
-		console.log("Nyckel payload:", nyckelPayload)
+		console.log("Nyckel payload type:", nyckelPayload.contentType)
 
 		const response = await fetch(
 			"https://www.nyckel.com/v1/functions/document-types-identifier/invoke",

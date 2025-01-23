@@ -4,6 +4,7 @@ import type {
 	DatabaseSession,
 	DatabaseUser,
 } from "lucia/dist/database"
+import { env } from "@/env"
 
 interface SessionAttributes {
 	userId: string
@@ -27,7 +28,7 @@ const adapter: Adapter = {
 					{
 						id: "admin",
 						attributes: {
-							email: process.env.ADMIN_EMAIL!,
+							email: env.ADMIN_EMAIL,
 						},
 					},
 			  ]
@@ -75,7 +76,7 @@ export const auth = new Lucia(adapter, {
 	},
 	sessionCookie: {
 		attributes: {
-			secure: process.env.NODE_ENV === "production",
+			secure: env.NEXT_PUBLIC_NODE_ENV === "production",
 		},
 	},
 })

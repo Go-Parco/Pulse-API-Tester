@@ -1,7 +1,9 @@
 import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import { Toaster } from "@/components/ui/toaster"
+import { Toaster as SonnerToaster } from "@/components/ui/sonner"
 import "./styles/globals.css"
+import { TRPCProvider } from "./providers"
 
 const geistSans = Geist({
 	variable: "--font-geist-sans",
@@ -27,8 +29,9 @@ export default function RootLayout({
 		<html lang="en" className="light">
 			<body
 				className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-				{children}
+				<TRPCProvider>{children}</TRPCProvider>
 				<Toaster />
+				<SonnerToaster />
 			</body>
 		</html>
 	)

@@ -13,19 +13,33 @@ const DocumentNameDisplay: React.FC<DocumentNameDisplayProps> = ({
 	documentName,
 	fileUrl,
 }) => {
-	const fileExtension = originalFileName.split(".").pop()?.toLowerCase() || ""
+	const fileExtension = `.${
+		originalFileName.split(".").pop()?.toLowerCase() || ""
+	}`
+	// Use the document name as is since it should already include the extension from the funnel
 	const displayName = documentName || originalFileName
 
-	const handleDownload = (e: React.MouseEvent) => {
+	const handleDownload = async (e: React.MouseEvent) => {
 		e.preventDefault()
 		if (fileUrl) {
-			const a = document.createElement("a")
-			a.href = fileUrl
-			// Use the original file extension for the download
-			a.download = `${displayName}.${fileExtension}`
-			document.body.appendChild(a)
-			a.click()
-			document.body.removeChild(a)
+			try {
+				const response = await fetch(fileUrl)
+				const blob = await response.blob()
+				const objectUrl = URL.createObjectURL(blob)
+				const a = document.createElement("a")
+				a.href = objectUrl
+				// Ensure the download name has an extension
+				const downloadName = displayName.includes(".")
+					? displayName
+					: `${displayName}${fileExtension}`
+				a.download = downloadName
+				document.body.appendChild(a)
+				a.click()
+				document.body.removeChild(a)
+				URL.revokeObjectURL(objectUrl)
+			} catch (error) {
+				console.error("Error downloading file:", error)
+			}
 		}
 	}
 
@@ -35,7 +49,6 @@ const DocumentNameDisplay: React.FC<DocumentNameDisplayProps> = ({
 				{getFileIcon(originalFileName, 24)}
 				<span className="text-sm font-medium text-zinc-700">
 					{displayName}
-					<span className="text-zinc-400 ml-1">.{fileExtension}</span>
 				</span>
 			</div>
 			{fileUrl && (
