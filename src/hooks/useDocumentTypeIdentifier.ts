@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { SafeLog } from "@/utils/SafeLog"
 
 export function useDocumentTypeIdentifier() {
 	const [documentType, setDocumentType] = useState<string | null>(null)
@@ -24,7 +25,7 @@ export function useDocumentTypeIdentifier() {
 			const { type } = await response.json()
 			setDocumentType(type)
 		} catch (error) {
-			console.error("Identification error:", error)
+			SafeLog({ display: false, log: { "Identification error": error } })
 		} finally {
 			setIsIdentifying(false)
 		}

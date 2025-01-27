@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { SafeLog } from "@/utils/SafeLog"
 
 export function useExtraction() {
 	const [extractedData, setExtractedData] = useState<any>(null)
@@ -24,7 +25,7 @@ export function useExtraction() {
 			const data = await response.json()
 			setExtractedData(data)
 		} catch (error) {
-			console.error("Extraction error:", error)
+			SafeLog({ display: false, log: { "Extraction error": error } })
 		} finally {
 			setIsExtracting(false)
 		}

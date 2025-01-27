@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server"
 import { NYCKEL_API_KEY } from "../config"
+import { SafeLog } from "@/utils/SafeLog"
 
 export async function POST(request: Request) {
 	try {
 		const { url, isBase64 } = await request.json()
-		console.log("Received input type:", isBase64 ? "base64" : "url")
+		SafeLog({
+			display: false,
+			log: { "Received input type": isBase64 ? "base64" : "url" },
+		})
 
 		if (!url) {
 			return NextResponse.json(
@@ -33,14 +37,20 @@ export async function POST(request: Request) {
 
 		if (!response.ok) {
 			const errorText = await response.text()
-			console.error("Nyckel API error response:", errorText)
+			SafeLog({
+				display: true,
+				log: { "Nyckel API error response": errorText },
+			})
 			throw new Error(
 				`Nyckel API error: ${response.statusText}. Details: ${errorText}`
 			)
 		}
 
 		const data = await response.json()
-		console.log("Nyckel API response:", data)
+		SafeLog({
+			display: false,
+			log: { "Nyckel API response": data },
+		})
 
 		return NextResponse.json({
 			documentType: data.labelName,

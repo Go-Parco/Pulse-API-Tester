@@ -1,6 +1,7 @@
 import { createUploadthing, type FileRouter } from "uploadthing/next"
 import { UploadThingError } from "uploadthing/server"
 import { utapi } from "./config"
+import { SafeLog } from "@/utils/SafeLog"
 
 const f = createUploadthing()
 
@@ -12,18 +13,18 @@ export const ourFileRouter = {
 		pdf: { maxFileSize: "8MB", maxFileCount: 1 },
 		image: { maxFileSize: "8MB", maxFileCount: 1 },
 	})
-		.middleware(async ({ req }) => {
-			const user = await auth(req)
-			if (!user) throw new UploadThingError("Unauthorized")
-			return { userId: user.id }
-		})
+		// .middleware(async ({ req }) => {
+		// 	const user = await auth(req)
+		// 	if (!user) throw new UploadThingError("Unauthorized")
+		// 	return { userId: user.id }
+		// })
 		.onUploadComplete(async ({ metadata, file }) => {
-			console.log("Upload complete for userId:", metadata.userId)
-			console.log("file url", file.url)
+			// console.log("Upload complete for userId:", metadata.userId)
+			SafeLog({ display: false, log: { "file url": file.url } })
 
 			return {
 				url: file.url,
-				uploadedBy: metadata.userId,
+				// uploadedBy: metadata.userId,
 			}
 		}),
 
@@ -36,23 +37,40 @@ export const ourFileRouter = {
 			if (!user) throw new UploadThingError("Unauthorized")
 
 			// Get the file key and new name from the request
-			const { fileKey, newName } = await req.json()
-			if (!fileKey || !newName)
+			const body = await req.json()
+			SafeLog({ display: false, log: { "Rename request body": body } })
+
+			const { fileKey, newName } = body
+			if (!fileKey || !newName) {
+				SafeLog({
+					display: false,
+					log: { "Missing required fields": { fileKey, newName } },
+				})
 				throw new UploadThingError("Missing file key or new name")
+			}
 
 			return { userId: user.id, fileKey, newName }
 		})
 		.onUploadComplete(async ({ metadata }) => {
 			try {
-				console.log("Attempting to rename file:", {
-					fileKey: metadata.fileKey,
-					newName: metadata.newName,
+				SafeLog({
+					display: false,
+					log: {
+						"Attempting to rename file": {
+							fileKey: metadata.fileKey,
+							newName: metadata.newName,
+						},
+					},
 				})
+
 				const result = await utapi.renameFiles({
 					fileKey: metadata.fileKey,
 					newName: metadata.newName,
 				})
-				console.log("Rename operation result:", result)
+				SafeLog({
+					display: false,
+					log: { "Rename operation result": result },
+				})
 
 				return {
 					success: true,
@@ -60,7 +78,10 @@ export const ourFileRouter = {
 					result,
 				}
 			} catch (error) {
-				console.error("Error renaming file:", error)
+				SafeLog({
+					display: false,
+					log: { "Error renaming file": error },
+				})
 				throw new UploadThingError("Failed to rename file")
 			}
 		}),

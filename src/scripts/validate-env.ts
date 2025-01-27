@@ -1,5 +1,6 @@
 import { z } from "zod"
 import dotenv from "dotenv"
+import { SafeLog } from "@/utils/SafeLog"
 
 dotenv.config()
 
@@ -23,4 +24,4 @@ const envSchema = z.object({
 })
 
 envSchema.parse(process.env)
-console.log("✅ Environment variables are valid")
+SafeLog({ display: false, log: { Status: "Environment variables are valid" } })

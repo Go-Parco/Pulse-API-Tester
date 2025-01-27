@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { usePulseAsyncExtract } from "@/hooks/usePulseAsyncExtract"
-import StepIndicator from "@/components/StepIndicator"
+import StepIndicator, { Step } from "@/components/StepIndicator"
+import { SafeLog } from "@/utils/SafeLog"
 
 type TabId = "schema" | "text" | "tables"
 
@@ -11,6 +12,14 @@ interface Tab {
 	id: TabId
 	label: string
 }
+
+const EXTRACTION_STEPS: Step[] = [
+	{ id: "idle", label: "Ready" },
+	{ id: "pending", label: "Starting" },
+	{ id: "processing", label: "Processing" },
+	{ id: "completed", label: "Complete" },
+	{ id: "failed", label: "Error" },
+]
 
 export default function ExtractAsyncPage() {
 	const router = useRouter()
@@ -41,9 +50,18 @@ export default function ExtractAsyncPage() {
 
 	useEffect(() => {
 		if (extractedData) {
-			console.log("Raw Extracted Data:", extractedData)
-			console.log("Schema Data:", extractedData?.schema)
-			console.log("Extraction State:", extractionState)
+			SafeLog({
+				display: false,
+				log: { "Raw Extracted Data": extractedData },
+			})
+			SafeLog({
+				display: false,
+				log: { "Schema Data": extractedData?.schema },
+			})
+			SafeLog({
+				display: false,
+				log: { "Extraction State": extractionState },
+			})
 		}
 	}, [extractedData, extractionState])
 
@@ -209,7 +227,13 @@ export default function ExtractAsyncPage() {
 					<div className="space-y-4">
 						<div className="space-y-4">
 							{isProcessing && (
-								<StepIndicator currentState={extractionState} />
+								<StepIndicator
+									steps={EXTRACTION_STEPS}
+									currentState={{
+										currentStepId: extractionState,
+										completedStepIds: [],
+									}}
+								/>
 							)}
 							<button
 								onClick={handleAsyncExtraction}

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { SafeLog } from "@/utils/SafeLog"
 
 type DocNameFunnelProps = {
 	data: {
@@ -11,6 +12,7 @@ type DocNameFunnelProps = {
 			pay_plan?: string
 		}
 		docType: string
+		originalFileName?: string
 		originalExtension: string
 	}
 }
@@ -95,13 +97,19 @@ const formatDocName = (
 	docType: string,
 	docProvider: string,
 	extension: string,
-	abbreviation?: string
+	abbreviation?: string,
+	originalFileName?: string
 ) => {
-	console.log("formatDocName inputs:", {
-		docType,
-		docProvider,
-		extension,
-		abbreviation,
+	SafeLog({
+		display: false,
+		log: {
+			"formatDocName inputs": {
+				docType,
+				docProvider,
+				extension,
+				abbreviation,
+			},
+		},
 	})
 	const baseName = abbreviation
 		? `${docType} - ${abbreviation}`
@@ -115,7 +123,10 @@ const formatDocName = (
 		: ""
 
 	const fullName = `${baseName}${cleanExtension}`
-	console.log("formatDocName output:", fullName)
+	SafeLog({
+		display: false,
+		log: { "formatDocName output": fullName },
+	})
 	return { name: fullName, extension: cleanExtension }
 }
 
@@ -137,9 +148,15 @@ const processEarningsStatements = (
 	setExtension: (ext: string) => void
 ) => {
 	const comesFrom = schemaData.document_comes_from.toLowerCase()
-	console.log("=== AGENCY MATCHING DEBUG ===")
-	console.log("Document comes from:", comesFrom)
-	console.log("Checking against agencies:", AgencyLabelConversion)
+	SafeLog({
+		display: false,
+		log: {
+			"Agency Matching": {
+				"Document comes from": comesFrom,
+				"Checking against agencies": AgencyLabelConversion,
+			},
+		},
+	})
 
 	// Find matching agency by checking if the document_comes_from matches any of the possible matches
 	const matchingAgency = Object.entries(AgencyLabelConversion).find(
@@ -148,18 +165,27 @@ const processEarningsStatements = (
 				const matchLower = match.toLowerCase()
 				const sourceMatch = comesFrom === matchLower
 				const sourceIncludes = comesFrom.includes(matchLower)
-				console.log(`Checking agency - Key: ${key}, Match: ${match}`)
-				console.log(
-					`Source exact match: ${sourceMatch}, Source includes: ${sourceIncludes}`
-				)
+				SafeLog({
+					display: false,
+					log: {
+						"Agency Check": {
+							key,
+							match,
+							sourceMatch,
+							sourceIncludes,
+						},
+					},
+				})
 				return sourceMatch || sourceIncludes
 			})
 			return matches
 		}
 	)
 
-	console.log("Agency match result:", matchingAgency)
-	console.log("=========================")
+	SafeLog({
+		display: false,
+		log: { "Agency match result": matchingAgency },
+	})
 
 	if (matchingAgency) {
 		const [key, value] = matchingAgency
@@ -170,9 +196,14 @@ const processEarningsStatements = (
 			extension,
 			key
 		)
-		console.log("Creating document name with extension:", {
-			docName: name,
-			extension: cleanExtension,
+		SafeLog({
+			display: false,
+			log: {
+				"Document name creation": {
+					docName: name,
+					extension: cleanExtension,
+				},
+			},
 		})
 		setDocName(name)
 		setExtension(cleanExtension)
@@ -204,11 +235,17 @@ const processInvoiceDocs = (
 	setManualReview: (manualReview: boolean) => void,
 	setSuggestion: (suggestion: DocNameFunnelReturn["suggestion"]) => void
 ) => {
-	console.log("=== INVOICE DOCS MATCHING DEBUG ===")
-	console.log("Document comes from:", schemaData.document_comes_from)
-	console.log("Document kind:", schemaData.document_kind)
-	console.log("Document name:", schemaData.document_name)
-	console.log("Checking against banks:", BankLabelConversion)
+	SafeLog({
+		display: false,
+		log: {
+			"Invoice Document Processing": {
+				"Document comes from": schemaData.document_comes_from,
+				"Document kind": schemaData.document_kind,
+				"Document name": schemaData.document_name,
+				"Checking against banks": BankLabelConversion,
+			},
+		},
+	})
 
 	// first check if the document_name or document_kind contains the word "check"
 	if (
@@ -219,7 +256,7 @@ const processInvoiceDocs = (
 		setDocType("Voided Check")
 		setDocName(
 			formatDocName(
-				"Voided Check",
+				"Voided_Check",
 				schemaData.document_comes_from,
 				extension
 			).name
@@ -234,22 +271,32 @@ const processInvoiceDocs = (
 				const keyMatch = schemaData.document_comes_from
 					.toLowerCase()
 					.includes(key.toLowerCase().replace("_", " "))
-				console.log(`Checking bank - Key: ${key}, Value: ${value}`)
-				console.log(
-					`Source match: ${sourceMatch}, Key match: ${keyMatch}`
-				)
+				SafeLog({
+					display: false,
+					log: {
+						"Bank Check": {
+							key,
+							value,
+							sourceMatch,
+							keyMatch,
+						},
+					},
+				})
 				return sourceMatch || keyMatch
 			}
 		)
 
-		console.log("Bank match result:", bankMatch)
+		SafeLog({
+			display: false,
+			log: { "Bank match result": bankMatch },
+		})
 
 		if (bankMatch) {
 			const [key, { display }] = bankMatch
 			setDocProvider(display)
 			setDocType("Account Statement")
 			setDocName(
-				formatDocName("Account Statement", display, extension).name
+				formatDocName("Account_Statement", display, extension).name
 			)
 		} else {
 			setError({
@@ -262,7 +309,10 @@ const processInvoiceDocs = (
 			})
 		}
 	}
-	console.log("=========================")
+	SafeLog({
+		display: false,
+		log: { "=========================": null },
+	})
 }
 
 export const docNameFunnel = ({
@@ -270,7 +320,8 @@ export const docNameFunnel = ({
 }: {
 	props: DocNameFunnelProps
 }): DocNameFunnelReturn => {
-	const { schemaData, docType, originalExtension } = props.data
+	const { schemaData, docType, originalExtension, originalFileName } =
+		props.data
 	let docProvider = ""
 	let docName = ""
 	let confirmedDocType = ""

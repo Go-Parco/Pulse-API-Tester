@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/select"
 import { agencyOptions } from "@/types/zodQuerySchemaMaster"
 import { testAgencyQueries as getAgencyQueries } from "../../api_pages/textract/testAgencyQueries"
+import { SafeLog } from "@/utils/SafeLog"
 
 const formSchema = z.object({
 	agency: z.string({
@@ -72,7 +73,8 @@ const TextractUploader = () => {
 	}
 
 	const handleFormSubmit = (data: any) => {
-		console.log("Form submitted with data:", data)
+		SafeLog({ display: false, log: { "Form submitted with data": data } })
+		// ... rest of the code ...
 	}
 
 	const getStatusMessage = () => {

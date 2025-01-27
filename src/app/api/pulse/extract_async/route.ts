@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { PULSE_API_URL } from "../config"
 import type { PulseConfig } from "../config"
 import { env } from "@/env"
+import { SafeLog } from "@/utils/SafeLog"
 
 // Define the default schema according to the API docs
 const DEFAULT_SCHEMA = {
@@ -33,10 +34,14 @@ export async function POST(request: Request) {
 			extract_schema: true,
 		}
 
-		console.log("Request details:", {
-			url: `${PULSE_API_URL}/extract_async`,
-			apiKey: apiKey?.slice(0, 4) + "..." + apiKey?.slice(-4),
-			body: requestBody,
+		SafeLog({
+			display: false,
+			log: {
+				"Request details": {
+					url: `${PULSE_API_URL}/extract_async`,
+					apiKey: apiKey?.slice(0, 4) + "..." + apiKey?.slice(-4),
+				},
+			},
 		})
 
 		const response = await fetch(`${PULSE_API_URL}/extract_async`, {
@@ -50,10 +55,15 @@ export async function POST(request: Request) {
 
 		if (!response.ok) {
 			const errorData = await response.json().catch(() => ({}))
-			console.error("Pulse API Error:", {
-				status: response.status,
-				statusText: response.statusText,
-				error: errorData,
+			SafeLog({
+				display: false,
+				log: {
+					"Pulse API Error": {
+						status: response.status,
+						statusText: response.statusText,
+						error: errorData.error,
+					},
+				},
 			})
 			throw new Error(
 				errorData.error ||
@@ -62,7 +72,7 @@ export async function POST(request: Request) {
 		}
 
 		const data = await response.json()
-		console.log("Raw API Response:", data)
+		SafeLog({ display: false, log: { "Raw API Response": data } })
 
 		if (!data.job_id) {
 			throw new Error("No job ID returned from API")
@@ -73,7 +83,7 @@ export async function POST(request: Request) {
 			status: data.status || "pending",
 		})
 	} catch (error: any) {
-		console.error("Extraction error:", error)
+		SafeLog({ display: false, log: { "Extraction error": error } })
 		return NextResponse.json(
 			{
 				error: error.message || "Failed to start async extraction",

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { SafeLog } from "@/utils/SafeLog"
 
 type ChunkingMethod = "semantic" | "recursive"
 
@@ -56,7 +57,7 @@ export const usePulseExtract = () => {
 				return false
 			}
 		} catch (error: any) {
-			console.error("Poll error:", error)
+			SafeLog({ display: false, log: { "Poll error": error } })
 			setExtractionStatus(
 				`Failed to check status: ${
 					error.message || "Unknown error occurred"
@@ -104,7 +105,7 @@ export const usePulseExtract = () => {
 				await pollStatus(data.job_id)
 			}
 		} catch (error: any) {
-			console.error("Extraction error:", error)
+			SafeLog({ display: false, log: { "Extraction error": error } })
 			setExtractionStatus(
 				`Failed to extract: ${
 					error.message || "Unknown error occurred"

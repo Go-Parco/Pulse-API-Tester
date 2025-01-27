@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { PULSE_API_URL } from "../config"
 import type { PulseConfig, PulseExtractResponse } from "../config"
 import { env } from "@/env"
+import { SafeLog } from "@/utils/SafeLog"
 
 export async function POST(request: Request) {
 	try {
@@ -12,13 +13,18 @@ export async function POST(request: Request) {
 			throw new Error("PULSE_API_KEY is not configured")
 		}
 
-		console.log("Request details:", {
-			url: `${PULSE_API_URL}/extract`,
-			apiKey: apiKey?.slice(0, 4) + "..." + apiKey?.slice(-4),
-			body: {
-				"file-url": fileUrl,
-				chunking: method || "semantic",
-				return_table: true,
+		SafeLog({
+			display: false,
+			log: {
+				"Request details": {
+					url: `${PULSE_API_URL}/extract`,
+					apiKey: apiKey?.slice(0, 4) + "..." + apiKey?.slice(-4),
+					body: {
+						"file-url": fileUrl,
+						chunking: method || "semantic",
+						return_table: true,
+					},
+				},
 			},
 		})
 
@@ -37,10 +43,15 @@ export async function POST(request: Request) {
 
 		if (!response.ok) {
 			const errorData = await response.json().catch(() => ({}))
-			console.error("Pulse API Error:", {
-				status: response.status,
-				statusText: response.statusText,
-				error: errorData,
+			SafeLog({
+				display: false,
+				log: {
+					"Pulse API Error": {
+						status: response.status,
+						statusText: response.statusText,
+						error: errorData,
+					},
+				},
 			})
 			throw new Error(
 				errorData.error ||
@@ -49,7 +60,7 @@ export async function POST(request: Request) {
 		}
 
 		const data = await response.json()
-		console.log("Raw API Response:", data)
+		SafeLog({ display: false, log: { "Raw API Response": data } })
 
 		// Transform the response to match our expected format
 		const result: PulseExtractResponse = {
@@ -62,10 +73,10 @@ export async function POST(request: Request) {
 				}) || [],
 		}
 
-		console.log("Transformed Response:", result)
+		SafeLog({ display: false, log: { "Transformed Response": result } })
 		return NextResponse.json({ result })
 	} catch (error: any) {
-		console.error("Extraction error:", error)
+		SafeLog({ display: false, log: { "Extraction error": error } })
 		return NextResponse.json(
 			{
 				error: error.message || "Failed to extract PDF",

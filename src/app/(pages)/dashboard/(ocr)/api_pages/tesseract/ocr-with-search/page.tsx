@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button"
 import textractLogo from "@/assets/icons/textract.png"
 import FileSourceSelector from "@/components/myComponents/fileSourceSelector"
 import { AcceptedFileType } from "@/types/FileTypes"
+import { SafeLog } from "@/utils/SafeLog"
 
 interface FormData {
 	query: string
@@ -61,14 +62,14 @@ const OCRWithSearch = () => {
 			})
 
 			const data = await response.json()
-			console.log("OCR Response:", data)
+			SafeLog({ display: false, log: { "OCR Response": data } })
 
 			if (data.success) {
 				setResult(data.text)
 				setHasSubmitted(true)
 			}
 		} catch (error) {
-			console.error("Upload error:", error)
+			SafeLog({ display: false, log: { "Upload error": error } })
 		} finally {
 			setIsProcessing(false)
 		}

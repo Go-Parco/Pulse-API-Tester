@@ -38,6 +38,7 @@ import Link from "next/link"
 import { CodeExcerpt } from "@/components/myComponents/CodeExcerpt"
 import { env } from "@/env"
 import { Step, StepState } from "@/components/StepIndicator"
+import { SafeLog } from "@/utils/SafeLog"
 const { useUploadThing: useUploadThingCore } =
 	generateReactHelpers<OurFileRouter>()
 
@@ -50,9 +51,7 @@ const GetFormattedFileName = (fileName: string) => {
 
 const PROCESSING_STEPS: Step[] = [
 	{ id: "uploading", label: "Uploading File" },
-	{ id: "uploaded", label: "File Uploaded" },
 	{ id: "identifying", label: "Identifying Document Type" },
-	{ id: "reading", label: "Reading Document" },
 	{ id: "extracting", label: "Extracting Text" },
 	{ id: "renaming", label: "Renaming File" },
 	{ id: "complete", label: "Complete" },
@@ -61,6 +60,7 @@ const PROCESSING_STEPS: Step[] = [
 
 export default function DocumentRenamePage() {
 	const { startUpload } = useUploadThingCore("imageUploader")
+
 	const {
 		uploadStatus,
 		progress: uploadProgress,
@@ -101,31 +101,28 @@ export default function DocumentRenamePage() {
 		currentStepId: "",
 		completedStepIds: [],
 	})
+	const [uploadedFileKey, setUploadedFileKey] = useState<string>("")
 
 	const MIN_STEP_DELAY = 800
 	const MIN_ACTIVE_DELAY = 500
 
-	// Define expected schema
-	const expectedSchema = {
-		document_comes_from: "string",
-		document_kind: "string",
-		document_name: "string",
-	}
-
 	// Update step state helper
 	const updateStep = (stepId: string) => {
-		setStepState((prev) => ({
-			currentStepId: stepId,
-			completedStepIds: [
-				...prev.completedStepIds,
-				prev.currentStepId,
-			].filter(Boolean),
-		}))
-	}
+		setStepState((prev) => {
+			// Get the index of the current step
+			const currentIndex = PROCESSING_STEPS.findIndex(
+				(step) => step.id === stepId
+			)
+			// Get all steps before this one
+			const completedSteps = PROCESSING_STEPS.slice(0, currentIndex)
+				.map((step) => step.id)
+				.filter(Boolean)
 
-	const updateStepWithDelay = async (stepId: string) => {
-		updateStep(stepId)
-		await new Promise((resolve) => setTimeout(resolve, MIN_STEP_DELAY))
+			return {
+				currentStepId: stepId,
+				completedStepIds: completedSteps,
+			}
+		})
 	}
 
 	const uploadFile = async (file: File): Promise<string> => {
@@ -136,19 +133,36 @@ export default function DocumentRenamePage() {
 			throw new Error("File has no extension")
 		}
 		setOriginalFileName(file.name)
+		SafeLog({ display: false, log: { "Original file name": file.name } })
 		setOriginalFileExtension(`.${extension}`)
-		console.log(
-			"Starting upload with file:",
-			file.name,
-			"extension:",
-			extension
-		)
+		SafeLog({
+			display: false,
+			log: {
+				"Starting upload": {
+					fileName: file.name,
+					extension: extension,
+				},
+			},
+		})
 
 		try {
 			const uploadResponse = await startUpload([file])
-			const url = uploadResponse?.[0]?.url
-			console.log("Upload complete, URL:", url)
+			const uploadResult = uploadResponse?.[0]
+			const url = uploadResult?.url
+			SafeLog({
+				display: false,
+				log: { "Upload complete": uploadResult },
+			})
 			if (!url) throw new Error("Upload failed - no URL returned")
+
+			// Store the file key from the upload response
+			if (uploadResult.key) {
+				setUploadedFileKey(uploadResult.key)
+				SafeLog({
+					display: false,
+					log: { "Stored file key": uploadResult.key },
+				})
+			}
 
 			// Create a blob from the uploaded file to handle downloads
 			const response = await fetch(url)
@@ -158,9 +172,12 @@ export default function DocumentRenamePage() {
 
 			return url
 		} catch (uploadError) {
-			console.log(
-				"Initial upload failed, trying with base64 conversion..."
-			)
+			SafeLog({
+				display: false,
+				log: {
+					"Initial upload failed": "Trying with base64 conversion...",
+				},
+			})
 
 			if (file.type === "application/pdf") {
 				const blob = await convertPdfToBase64(file)
@@ -170,10 +187,14 @@ export default function DocumentRenamePage() {
 					})
 					const retryResponse = await startUpload([convertedFile])
 					const url = retryResponse?.[0]?.url
-					console.log(
-						"Upload with base64 conversion complete, URL:",
-						url
-					)
+					SafeLog({
+						display: false,
+						log: {
+							"Upload with base64 conversion complete": {
+								url: url,
+							},
+						},
+					})
 					if (!url) throw new Error("Upload failed - no URL returned")
 					return url
 				}
@@ -181,19 +202,6 @@ export default function DocumentRenamePage() {
 			throw uploadError
 		} finally {
 			setIsUploading(false)
-		}
-	}
-
-	const processDocument = async (url: string) => {
-		setIsProcessing(true)
-		console.log("Starting document identification...")
-		await identifyDocument(url)
-		console.log("Document identification complete")
-
-		// After document identification, start Pulse extraction
-		if (url) {
-			console.log("Starting Pulse extraction...")
-			await startAsyncExtraction(url)
 		}
 	}
 
@@ -215,12 +223,9 @@ export default function DocumentRenamePage() {
 
 	const setStepWithMinimumActiveTime = async (
 		stepId: string,
-		completedSteps: string[] = []
+		previousSteps: string[]
 	) => {
-		setStepState((prev) => ({
-			currentStepId: stepId,
-			completedStepIds: [...prev.completedStepIds, ...completedSteps],
-		}))
+		updateStep(stepId)
 		await new Promise((resolve) => setTimeout(resolve, MIN_ACTIVE_DELAY))
 	}
 
@@ -242,22 +247,14 @@ export default function DocumentRenamePage() {
 				throw new Error("Failed to get document URL")
 			}
 
-			// Upload complete
-			await setStepWithMinimumActiveTime("uploaded", ["uploading"])
-			await new Promise((resolve) => setTimeout(resolve, MIN_STEP_DELAY))
-
-			// Start identification
-			await setStepWithMinimumActiveTime("identifying", ["uploaded"])
+			// Upload complete, move to identifying
+			await setStepWithMinimumActiveTime("identifying", ["uploading"])
 			setSelectedFileUrl(url)
 			setIsProcessing(true)
 			await identifyDocument(url)
 
-			// Document identified
-			await setStepWithMinimumActiveTime("reading", ["identifying"])
-			await new Promise((resolve) => setTimeout(resolve, MIN_STEP_DELAY))
-
 			// Start extracting
-			await setStepWithMinimumActiveTime("extracting", ["reading"])
+			await setStepWithMinimumActiveTime("extracting", ["identifying"])
 			await startAsyncExtraction(url)
 
 			// Wait for extraction to complete
@@ -269,31 +266,38 @@ export default function DocumentRenamePage() {
 			if (docNameResults?.data?.docName) {
 				await setStepWithMinimumActiveTime("renaming", ["extracting"])
 
-				// Call the rename API
 				try {
-					const response = await fetch(
-						"/api/uploadthing/renameUpload",
-						{
-							method: "POST",
-							headers: {
-								"Content-Type": "application/json",
-							},
-							body: JSON.stringify({
-								fileKey: url.split("/").pop(),
-								newName: docNameResults.data.docName,
-							}),
-						}
-					)
+					const response = await fetch("/api/uploadthing/rename", {
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json",
+						},
+						body: JSON.stringify({
+							fileKey: uploadedFileKey,
+							newName: docNameResults.data.docName,
+						}),
+					})
+
+					const data = await response.json()
+					SafeLog({
+						display: false,
+						log: { "Rename API response": data },
+					})
 
 					if (!response.ok) {
-						throw new Error("Failed to rename file")
+						throw new Error(
+							data.error || "Failed to rename document"
+						)
 					}
 
 					await new Promise((resolve) =>
 						setTimeout(resolve, MIN_STEP_DELAY)
 					)
 				} catch (error) {
-					console.error("Error renaming file:", error)
+					SafeLog({
+						display: false,
+						log: { "Error renaming file": error },
+					})
 					throw error
 				}
 			}
@@ -303,7 +307,10 @@ export default function DocumentRenamePage() {
 				docNameResults?.data?.docName ? "renaming" : "extracting",
 			])
 		} catch (error) {
-			console.error("Error processing document:", error)
+			SafeLog({
+				display: false,
+				log: { "Error processing document": error },
+			})
 			setStepState({
 				currentStepId: "error",
 				completedStepIds: [],
@@ -382,16 +389,34 @@ export default function DocumentRenamePage() {
 	const handleRenameDocument = async (
 		renameData: DocNameFunnelReturn["data"]
 	) => {
-		if (!renameData || !renameData.docName || !renameData.docProvider) {
-			console.error("Invalid rename data:", renameData)
+		if (
+			!renameData ||
+			!renameData.docName ||
+			!renameData.docProvider ||
+			!uploadedFileKey
+		) {
+			SafeLog({
+				display: false,
+				log: {
+					"Invalid rename data or missing file key": {
+						renameData,
+						uploadedFileKey,
+					},
+				},
+			})
 			updateStep("error")
 			return
 		}
 
 		try {
-			console.log("Attempting to rename document:", {
-				originalName: originalFileName,
-				newName: renameData.docName,
+			SafeLog({
+				display: false,
+				log: {
+					"Attempting to rename document": {
+						key: uploadedFileKey,
+						newName: renameData.docName,
+					},
+				},
 			})
 
 			const response = await fetch("/api/uploadthing/rename", {
@@ -400,13 +425,13 @@ export default function DocumentRenamePage() {
 					"Content-Type": "application/json",
 				},
 				body: JSON.stringify({
-					originalName: originalFileName,
+					fileKey: uploadedFileKey,
 					newName: renameData.docName,
 				}),
 			})
 
 			const data = await response.json()
-			console.log("Rename API response:", data)
+			SafeLog({ display: false, log: { "Rename API response": data } })
 
 			if (!response.ok) {
 				throw new Error(data.error || "Failed to rename document")
@@ -414,7 +439,10 @@ export default function DocumentRenamePage() {
 
 			updateStep("complete")
 		} catch (error) {
-			console.error("Error renaming document:", error)
+			SafeLog({
+				display: false,
+				log: { "Error renaming document": error },
+			})
 			updateStep("error")
 		}
 	}

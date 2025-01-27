@@ -8,9 +8,13 @@ import { AcceptedFileType } from "@/types/FileTypes"
 import { Button } from "@/components/ui/button"
 import { generateReactHelpers } from "@uploadthing/react"
 import type { OurFileRouter } from "@/app/api/uploadthing/config"
+import { SafeLog } from "@/utils/SafeLog"
 
 async function convertPdfToImage(pdfFile: File): Promise<string> {
-	console.log("Starting PDF to Image conversion...")
+	SafeLog({
+		display: true,
+		log: { Status: "Starting PDF to Image conversion..." },
+	})
 	try {
 		const formData = new FormData()
 		formData.append("file", pdfFile)
@@ -29,10 +33,13 @@ async function convertPdfToImage(pdfFile: File): Promise<string> {
 			throw new Error(data.error)
 		}
 
-		console.log("PDF successfully converted to image")
+		SafeLog({
+			display: true,
+			log: { Status: "PDF successfully converted to image" },
+		})
 		return data.base64Image
 	} catch (error) {
-		console.error("Error in PDF conversion:", error)
+		SafeLog({ display: true, log: { "Error in PDF conversion": error } })
 		throw error
 	}
 }
@@ -88,26 +95,55 @@ export default function DocumentTypeIdentifierPage() {
 
 				if (file.type === "application/pdf") {
 					try {
-						console.log("Processing PDF file:", {
-							name: file.name,
-							size: file.size,
-							type: file.type,
+						SafeLog({
+							display: false,
+							log: {
+								"Processing PDF file": {
+									name: file.name,
+									size: file.size,
+									type: file.type,
+								},
+							},
 						})
 						setIsProcessing(true)
 
-						console.log("Starting PDF conversion process...")
+						SafeLog({
+							display: false,
+							log: {
+								Status: "Starting PDF conversion process...",
+							},
+						})
 						const imageBase64 = await convertPdfToImage(file)
-						console.log("PDF successfully converted to image")
+						SafeLog({
+							display: false,
+							log: {
+								Status: "PDF successfully converted to image",
+							},
+						})
 
-						console.log("Sending to Nyckel API...")
+						SafeLog({
+							display: false,
+							log: { Status: "Sending to Nyckel API..." },
+						})
 						const result = await identifyDocument(imageBase64, true)
-						console.log("Nyckel API response received:", result)
+						SafeLog({
+							display: false,
+							log: { "Nyckel API response": result },
+						})
 					} catch (error) {
-						console.error("Error in PDF processing:", error)
+						SafeLog({
+							display: false,
+							log: { "Error in PDF processing": error },
+						})
 						if (error instanceof Error) {
-							console.error("Error details:", {
-								message: error.message,
-								stack: error.stack,
+							SafeLog({
+								display: false,
+								log: {
+									"Error details": {
+										message: error.message,
+										stack: error.stack,
+									},
+								},
 							})
 						}
 					} finally {
@@ -115,40 +151,64 @@ export default function DocumentTypeIdentifierPage() {
 						setIsProcessing(false)
 					}
 				} else {
-					// For non-PDFs, use the URL approach
-					console.log("Starting upload with file:", file.name)
+					SafeLog({
+						display: true,
+						log: { "Starting upload with file": file.name },
+					})
 					const uploadResponse = await startUpload([file])
 					url = uploadResponse?.[0]?.url
-					console.log("Upload complete, URL:", url)
+					SafeLog({
+						display: true,
+						log: { "Upload complete, URL": url },
+					})
 
 					if (url) {
 						setIsProcessing(true)
-						console.log("Starting document identification...")
+						SafeLog({
+							display: true,
+							log: {
+								Status: "Starting document identification...",
+							},
+						})
 						const result = await identifyDocument(url)
-						console.log("Document identification complete")
-						console.log("Result:", result)
+						SafeLog({
+							display: true,
+							log: { Status: "Document identification complete" },
+						})
+						SafeLog({ display: false, log: { Result: result } })
 					}
 				}
 			} else if (data.type === "url" && typeof data.value === "string") {
 				url = data.value
-				console.log("Using provided URL:", url)
+				SafeLog({ display: true, log: { "Using provided URL": url } })
 			} else if (data.type === "default") {
 				url = DEFAULT_FILE_URL
 			}
 
 			if (url) {
 				setIsProcessing(true)
-				console.log("Starting document identification...")
+				SafeLog({
+					display: true,
+					log: { Status: "Starting document identification..." },
+				})
 				const result = await identifyDocument(url)
-				console.log("Document identification complete")
-				console.log("Result:", result)
+				SafeLog({
+					display: true,
+					log: { Status: "Document identification complete" },
+				})
+				SafeLog({ display: false, log: { Result: result } })
 				if (result.error) {
-					// try again but by first converting the url pdf to base64
-					console.log("bypass the url and pass")
+					SafeLog({
+						display: false,
+						log: { Status: "bypass the url and pass" },
+					})
 				}
 			}
 		} catch (error) {
-			console.error("Error processing document:", error)
+			SafeLog({
+				display: false,
+				log: { "Error processing document": error },
+			})
 		} finally {
 			setIsUploading(false)
 			setIsProcessing(false)

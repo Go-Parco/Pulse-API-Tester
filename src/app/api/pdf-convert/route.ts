@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import sharp from "sharp"
+import { SafeLog } from "@/utils/SafeLog"
 
 export const maxDuration = 300
 export const dynamic = "force-dynamic"
@@ -10,28 +11,42 @@ type ConversionError = Error & {
 
 export async function POST(request: Request) {
 	try {
-		console.log("Starting PDF conversion request...")
+		SafeLog({
+			display: false,
+			log: { Status: "Starting PDF conversion request..." },
+		})
 		const formData = await request.formData()
 		const file = formData.get("file") as File
 
 		if (!file) {
-			console.error("No file provided in request")
+			SafeLog({
+				display: false,
+				log: { "Conversion error": { message: "No file provided" } },
+			})
 			return NextResponse.json(
 				{ error: "No file provided" },
 				{ status: 400 }
 			)
 		}
 
-		console.log("Processing file:", {
-			name: file.name,
-			type: file.type,
-			size: file.size,
+		SafeLog({
+			display: false,
+			log: {
+				"Processing file": {
+					name: file.name,
+					type: file.type,
+					size: file.size,
+				},
+			},
 		})
 
 		try {
 			// Convert File to Buffer
 			const buffer = Buffer.from(await file.arrayBuffer())
-			console.log("File converted to buffer")
+			SafeLog({
+				display: false,
+				log: { Status: "File converted to buffer" },
+			})
 
 			// Create a white image with placeholder text
 			const width = 2000
@@ -53,23 +68,27 @@ export async function POST(request: Request) {
 
 			// Convert to base64
 			const base64Image = image.toString("base64")
-			console.log("Conversion completed")
+			SafeLog({ display: false, log: { Status: "Conversion completed" } })
 
 			return NextResponse.json({
 				base64Image: `data:image/png;base64,${base64Image}`,
 			})
 		} catch (err) {
 			const conversionError = err as ConversionError
-			console.error("Conversion error:", {
-				message: conversionError.message,
-				stack: conversionError.stack,
+			SafeLog({
+				display: false,
+				log: {
+					"Conversion error": {
+						message: conversionError.message,
+						stack: conversionError.stack,
+					},
+				},
 			})
 			throw conversionError
 		}
 	} catch (err) {
 		const error = err as ConversionError
-		console.error("PDF conversion failed:", error)
-
+		SafeLog({ display: false, log: { "PDF conversion failed": error } })
 		return NextResponse.json(
 			{
 				error: "Failed to convert PDF",

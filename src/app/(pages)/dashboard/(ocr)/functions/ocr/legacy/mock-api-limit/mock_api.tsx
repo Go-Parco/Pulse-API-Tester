@@ -2,6 +2,7 @@
 import React, { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
+import { SafeLog } from "@/utils/SafeLog"
 
 export const queries = [
 	"name",
@@ -85,10 +86,15 @@ const MockAPI = () => {
 				)
 				const data = await response.json()
 				fetches++
-				console.log({
-					fetchNumber: fetches,
-					data: data.data,
-					undefinedValues: data.undefinedCount,
+				SafeLog({
+					display: false,
+					log: {
+						"Mock API Response": {
+							fetchNumber: fetches,
+							data: data.data,
+							undefinedValues: data.undefinedCount,
+						},
+					},
 				})
 				if (data.undefinedCount > 0) {
 					undefinedCount += data.undefinedCount
@@ -146,7 +152,7 @@ const MockAPI = () => {
 					fetchErrors,
 				}
 
-				console.log("SUMMARY", summary)
+				SafeLog({ display: false, log: { Summary: summary } })
 				setSummaryResults(summary)
 				toast({
 					title:

@@ -1,6 +1,7 @@
 import { z } from "zod"
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc"
 import sharp from "sharp"
+import { SafeLog } from "@/utils/SafeLog"
 
 export const pdfRouter = createTRPCRouter({
 	convert: publicProcedure
@@ -12,16 +13,24 @@ export const pdfRouter = createTRPCRouter({
 		.mutation(async ({ input }) => {
 			const { file } = input
 
-			console.log("Processing file:", {
-				name: file.name,
-				type: file.type,
-				size: file.size,
+			SafeLog({
+				display: false,
+				log: {
+					"Processing file": {
+						name: file.name,
+						type: file.type,
+						size: file.size,
+					},
+				},
 			})
 
 			try {
 				// Convert File to Buffer
 				const buffer = Buffer.from(await file.arrayBuffer())
-				console.log("File converted to buffer")
+				SafeLog({
+					display: false,
+					log: { Status: "File converted to buffer" },
+				})
 
 				// Create a white image with placeholder text
 				const width = 2000
@@ -43,13 +52,19 @@ export const pdfRouter = createTRPCRouter({
 
 				// Convert to base64
 				const base64Image = image.toString("base64")
-				console.log("Conversion completed")
+				SafeLog({
+					display: false,
+					log: { Status: "Conversion completed" },
+				})
 
 				return {
 					base64Image: `data:image/png;base64,${base64Image}`,
 				}
 			} catch (error) {
-				console.error("PDF conversion failed:", error)
+				SafeLog({
+					display: false,
+					log: { "PDF conversion error": error },
+				})
 				throw new Error(
 					error instanceof Error
 						? error.message

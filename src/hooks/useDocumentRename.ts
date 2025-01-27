@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { SafeLog } from "@/utils/SafeLog"
 
 export function useDocumentRename() {
 	const [suggestedName, setSuggestedName] = useState<string | null>(null)
@@ -24,7 +25,7 @@ export function useDocumentRename() {
 			const { suggestedName } = await response.json()
 			setSuggestedName(suggestedName)
 		} catch (error) {
-			console.error("Rename error:", error)
+			SafeLog({ display: false, log: { "Rename error": error } })
 		} finally {
 			setIsProcessing(false)
 		}

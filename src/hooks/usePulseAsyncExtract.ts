@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import type { PulseExtractResponse } from "@/app/api/pulse/config"
+import { SafeLog } from "@/utils/SafeLog"
 
 export type ExtractionState =
 	| "idle"
@@ -45,7 +46,7 @@ export const usePulseAsyncExtract = () => {
 		return STATE_PROGRESSION[currentIndex + 1]
 	}
 
-	const pollStatus = async (jobId: string) => {
+	const pollStatus = async (jobId: string): Promise<boolean> => {
 		try {
 			const response = await fetch(`/api/pulse/poll?jobId=${jobId}`)
 			const data = await response.json()
@@ -61,7 +62,10 @@ export const usePulseAsyncExtract = () => {
 
 			// Handle completion
 			if (data.status === "completed" && data.result) {
-				console.log("Setting extracted data with schema:", data.result) // Debug log
+				SafeLog({
+					display: false,
+					log: { "Setting extracted data with schema": data.result },
+				})
 				setExtractedData({
 					text: data.result.markdown || data.result.text,
 					tables: data.result.tables || [],
@@ -91,10 +95,14 @@ export const usePulseAsyncExtract = () => {
 			}
 
 			return false // Continue polling
-		} catch (error: any) {
-			console.error("Polling error:", error)
+		} catch (error: unknown) {
+			SafeLog({ display: false, log: { "Polling error": error } })
 			setExtractionState("failed")
-			setExtractionStatus(`Polling failed: ${error.message}`)
+			setExtractionStatus(
+				`Polling failed: ${
+					error instanceof Error ? error.message : "Unknown error"
+				}`
+			)
 			setExtractedData(null)
 			// Clear polling interval
 			if (pollInterval) {
@@ -146,11 +154,13 @@ export const usePulseAsyncExtract = () => {
 			}, 2000)
 
 			setPollInterval(interval)
-		} catch (error: any) {
-			console.error("Extraction error:", error)
+		} catch (error: unknown) {
+			SafeLog({ display: false, log: { "Extraction error": error } })
 			setExtractionStatus(
 				`Failed to extract: ${
-					error.message || "Unknown error occurred"
+					error instanceof Error
+						? error.message
+						: "Unknown error occurred"
 				}`
 			)
 			setExtractionState("failed")

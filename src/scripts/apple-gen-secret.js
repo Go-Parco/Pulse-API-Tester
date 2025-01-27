@@ -10,20 +10,20 @@ config()
 
 if (process.argv.includes("--help") || process.argv.includes("-h")) {
 	console.log(`
-  Creates a JWT from the components found at Apple.
-  By default, the JWT has a 6 months expiry date.
-  Read more: https://developer.apple.com/documentation/sign_in_with_apple/generate_and_validate_tokens#3262048
-  Usage:
-  node apple.mjs [--kid] [--iss] [--private_key] [--sub] [--expires_in] [--exp]
-    
-  Options:
-    --help                 Print this help message
-    --kid, --key_id        The key id of the private key
-    --iss, --team_id       The Apple team ID
-    --private_key          The private key to use to sign the JWT. (Starts with -----BEGIN PRIVATE KEY-----)
-    --sub, --client_id     The client id to use in the JWT.
-    --expires_in           Number of seconds from now when the JWT should expire. Defaults to 6 months.
-    --exp                  Future date in seconds when the JWT expires
+Creates a JWT from the components found at Apple.
+By default, the JWT has a 6 months expiry date.
+Read more: https://developer.apple.com/documentation/sign_in_with_apple/generate_and_validate_tokens#3262048
+Usage:
+node apple.mjs [--kid] [--iss] [--private_key] [--sub] [--expires_in] [--exp]
+  
+Options:
+  --help                 Print this help message
+  --kid, --key_id        The key id of the private key
+  --iss, --team_id       The Apple team ID
+  --private_key          The private key to use to sign the JWT. (Starts with -----BEGIN PRIVATE KEY-----)
+  --sub, --client_id     The client id to use in the JWT.
+  --expires_in           Number of seconds from now when the JWT should expire. Defaults to 6 months.
+  --exp                  Future date in seconds when the JWT expires
   `)
 } else {
 	// Get values from environment variables first

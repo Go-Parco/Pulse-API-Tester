@@ -1,6 +1,7 @@
 import React from "react"
 import { FiDownload } from "react-icons/fi"
 import { getFileIcon } from "../lib/fileIcons"
+import { SafeLog } from "@/utils/SafeLog"
 
 interface DocumentNameDisplayProps {
 	originalFileName: string
@@ -38,7 +39,10 @@ const DocumentNameDisplay: React.FC<DocumentNameDisplayProps> = ({
 				document.body.removeChild(a)
 				URL.revokeObjectURL(objectUrl)
 			} catch (error) {
-				console.error("Error downloading file:", error)
+				SafeLog({
+					display: false,
+					log: { "Error downloading file": error },
+				})
 			}
 		}
 	}

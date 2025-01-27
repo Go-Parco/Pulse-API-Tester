@@ -23,6 +23,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select"
 import { FileDocRenameType, AccountType } from "@/types/FileTypes"
+import { SafeLog } from "@/utils/SafeLog"
 
 const ManualFileRename = () => {
 	const [fileName, setFileName] = useState<FileDocRenameType>({
@@ -75,7 +76,7 @@ const ManualFileRename = () => {
 				title: "Downloaded File",
 			})
 		} else {
-			console.log("No file uploaded")
+			SafeLog({ display: false, log: { Status: "No file uploaded" } })
 		}
 	}
 

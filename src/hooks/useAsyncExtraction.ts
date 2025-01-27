@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { SafeLog } from "@/utils/SafeLog"
 
 export function useAsyncExtraction() {
 	const [extractedData, setExtractedData] = useState<any>(null)
@@ -46,10 +47,14 @@ export function useAsyncExtraction() {
 				clearInterval(pollInterval)
 				if (isExtracting) {
 					setIsExtracting(false)
-					console.error("Extraction timed out")
+					SafeLog({
+						display: false,
+						log: { "Extraction error": "Extraction timed out" },
+					})
 				}
 			}, 5 * 60 * 1000)
 		} catch (error) {
+			SafeLog({ display: false, log: { "Extraction error": error } })
 			console.error("Extraction error:", error)
 			setIsExtracting(false)
 		}

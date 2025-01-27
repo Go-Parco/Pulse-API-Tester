@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { SafeLog } from "@/utils/SafeLog"
 
 export async function POST(request: Request) {
 	try {
@@ -24,15 +25,9 @@ export async function POST(request: Request) {
 			undefinedCount: totalUndefined,
 		})
 	} catch (error) {
-		console.error("Error unifying responses:", error)
+		SafeLog({ display: false, log: { "Error unifying responses": error } })
 		return NextResponse.json(
-			{
-				error:
-					error instanceof Error
-						? error.message
-						: "Failed to unify responses",
-				details: error,
-			},
+			{ error: "Failed to unify responses" },
 			{ status: 500 }
 		)
 	}

@@ -4,47 +4,51 @@ import { AnalyzeDocumentCommand, FeatureType } from "@aws-sdk/client-textract"
 import { client } from "@/lib/textract"
 // @ts-ignore Keeping this testAgencyQueries in case needed for future testing
 import { testAgencyQueries } from "@/app/(pages)/dashboard/(ocr)/apis/textract/estAgencyQueries"
+import { SafeLog } from "@/utils/SafeLog"
+import { unifyResponses } from "./unify"
+import { extractQueries } from "@/functions/extractQueries"
 
 // Handle GET requests for response unification
 export async function GET(request: Request) {
 	try {
-		const url = new URL(request.url)
-		const responsesParam = url.searchParams.get("responses")
-		if (!responsesParam) {
+		const { searchParams } = new URL(request.url)
+		const queriesRaw = searchParams.get("queries")
+
+		if (!queriesRaw) {
 			return NextResponse.json(
-				{ error: "No responses provided" },
+				{ error: "No queries provided" },
 				{ status: 400 }
 			)
 		}
 
-		const parsedResponses = JSON.parse(responsesParam)
-		const totalUndefined = parseInt(
-			url.searchParams.get("totalUndefined") || "0"
-		)
+		SafeLog({ display: false, log: { "Received queries": queriesRaw } })
 
-		// Add debug logging
-		console.log("Parsed responses:", parsedResponses)
+		// Parse queries
+		let queries
+		try {
+			queries = JSON.parse(queriesRaw)
+		} catch (error) {
+			return NextResponse.json(
+				{ error: "Invalid queries format" },
+				{ status: 400 }
+			)
+		}
 
-		// Ensure we have an array and flatten it properly
-		const combinedData = Array.isArray(parsedResponses)
-			? parsedResponses.flat().filter(Boolean)
-			: []
+		SafeLog({ display: false, log: { "Processing queries": queries } })
 
-		console.log("Combined data:", combinedData)
+		// Extract queries from the response
+		const response = await extractQueries(queries)
+		SafeLog({ display: false, log: { "Textract response": response } })
 
-		return NextResponse.json({
-			data: combinedData,
-			undefinedCount: totalUndefined,
-		})
-	} catch (error) {
-		console.error("Error unifying responses:", error)
+		return NextResponse.json(response)
+	} catch (error: unknown) {
+		SafeLog({ display: false, log: { "Error analyzing document": error } })
 		return NextResponse.json(
 			{
 				error:
 					error instanceof Error
 						? error.message
-						: "Failed to unify responses",
-				details: error,
+						: "Unknown error occurred",
 			},
 			{ status: 500 }
 		)
@@ -54,57 +58,46 @@ export async function GET(request: Request) {
 // Handle POST requests for document analysis
 export async function POST(request: Request) {
 	try {
-		const formData = await request.formData()
-		const file = formData.get("file") as File
-		const startIndex = parseInt(formData.get("startIndex") as string) || 0
-		const endIndex = parseInt(formData.get("endIndex") as string) || 15
-		const queriesRaw = formData.get("queries")
+		const { responses } = await request.json()
 
-		console.log("Received queries:", queriesRaw) // Debug log
-
-		const queries = queriesRaw ? JSON.parse(queriesRaw as string) : []
-
-		if (!file || !queries.length) {
+		if (!responses || !Array.isArray(responses)) {
 			return NextResponse.json(
-				{ error: "No file or queries provided" },
+				{ error: "Invalid responses format" },
 				{ status: 400 }
 			)
 		}
 
-		const arrayBuffer = await file.arrayBuffer()
-		const buffer = Buffer.from(arrayBuffer)
-
-		console.log("Processing queries:", queries) // Debug log
-
-		const params = {
-			Document: {
-				Bytes: buffer,
-			},
-			FeatureTypes: [FeatureType.TABLES, FeatureType.QUERIES],
-			QueriesConfig: {
-				Queries: queries.map((q: string) => ({ Text: q })),
-			},
-		}
-
-		const command = new AnalyzeDocumentCommand(params)
-		const response = await client.send(command)
-
-		console.log("Textract response:", response) // Debug log
-
-		return NextResponse.json({
-			data: response,
-			queriesProcessed: queries.length,
-			startIndex,
-			endIndex,
+		// Parse each response
+		const parsedResponses = responses.map((response) => {
+			if (typeof response === "string") {
+				return JSON.parse(response)
+			}
+			return response
 		})
-	} catch (error) {
-		console.error("Error analyzing document:", error)
+
+		SafeLog({
+			display: false,
+			log: { "Parsed responses": parsedResponses },
+		})
+
+		// Combine the responses
+		const combinedData = parsedResponses.reduce((acc, curr) => {
+			return {
+				...acc,
+				...curr,
+			}
+		}, {})
+		SafeLog({ display: false, log: { "Combined data": combinedData } })
+
+		return NextResponse.json(combinedData)
+	} catch (error: unknown) {
+		SafeLog({ display: false, log: { "Error unifying responses": error } })
 		return NextResponse.json(
 			{
 				error:
 					error instanceof Error
 						? error.message
-						: "Failed to analyze document",
+						: "Unknown error occurred",
 			},
 			{ status: 500 }
 		)

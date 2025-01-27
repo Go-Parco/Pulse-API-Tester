@@ -12,6 +12,7 @@ import superjson from "superjson"
 import { ZodError } from "zod"
 import type { User } from "lucia"
 import { FetchCreateContextFnOptions } from "@trpc/server/adapters/fetch"
+import { SafeLog } from "@/utils/SafeLog"
 
 /**
  * 1. CONTEXT
@@ -95,7 +96,10 @@ const timingMiddleware = t.middleware(async ({ next, path }) => {
 	const start = Date.now()
 	const result = await next()
 	const end = Date.now()
-	console.log(`[TRPC] ${path} took ${end - start}ms to execute`)
+	SafeLog({
+		display: false,
+		log: { "TRPC Timing": { path, duration: `${end - start}ms` } },
+	})
 	return result
 })
 

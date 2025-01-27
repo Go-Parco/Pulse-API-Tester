@@ -3,6 +3,7 @@ import {
 	BlockType,
 	RelationshipType,
 } from "@aws-sdk/client-textract"
+import { SafeLog } from "@/utils/SafeLog"
 
 interface QuerySummary {
 	[key: string]: {
@@ -14,7 +15,10 @@ interface QuerySummary {
 
 export const extractQueries = async (data: AnalyzeDocumentCommandOutput) => {
 	if (!data.Blocks) {
-		console.error("No blocks found in the response")
+		SafeLog({
+			display: false,
+			log: { Error: "No blocks found in the response" },
+		})
 		return []
 	}
 	const allQueries = data.Blocks.reduce(
@@ -62,8 +66,8 @@ export const extractQueries = async (data: AnalyzeDocumentCommandOutput) => {
 		},
 		{}
 	)
-	console.log({ allQueries })
-	console.log({ allQueryQuestions })
+	SafeLog({ display: false, log: { allQueries } })
+	SafeLog({ display: false, log: { allQueryQuestions } })
 	return data.Blocks?.filter(
 		(block) => block.BlockType === BlockType.QUERY_RESULT
 	).map((result) => {

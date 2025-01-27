@@ -22,6 +22,7 @@ import { DiApple } from "react-icons/di"
 import { AiFillFile } from "react-icons/ai"
 import * as mm from "music-metadata-browser"
 import DocumentNameDisplay from "@/components/DocumentNameDisplay"
+import { SafeLog } from "@/utils/SafeLog"
 
 interface PreviewType {
 	type: "audio" | "image" | "pdf" | "other"
@@ -249,32 +250,45 @@ const FileUploader: React.FC<FileUploaderProps> = ({
 						)
 
 					if (isAudioFile) {
-						console.log(
-							"Processing audio file:",
-							fileName,
-							fileType
-						)
+						SafeLog({
+							display: false,
+							log: {
+								"Processing audio file": { fileName, fileType },
+							},
+						})
 						try {
 							const metadata = await mm.parseBlob(file)
-							console.log("Audio metadata:", metadata)
+							SafeLog({
+								display: false,
+								log: { "Audio metadata": metadata },
+							})
 
 							if (metadata?.common?.picture?.[0]) {
-								console.log("Found album art")
+								SafeLog({
+									display: false,
+									log: { Status: "Found album art" },
+								})
 								const picture = metadata.common.picture[0]
 								const blob = new Blob([picture.data], {
 									type: picture.format,
 								})
 								const url = URL.createObjectURL(blob)
-								console.log("Created album art URL:", url)
+								SafeLog({
+									display: false,
+									log: { "Created album art URL": url },
+								})
 								return { type: "audio" as const, preview: url }
 							} else {
-								console.log("No album art found")
+								SafeLog({
+									display: false,
+									log: { Status: "No album art found" },
+								})
 							}
 						} catch (error) {
-							console.error(
-								"Error reading audio metadata:",
-								error
-							)
+							SafeLog({
+								display: false,
+								log: { "Error reading audio metadata": error },
+							})
 						}
 						// Always return audio type even if metadata extraction fails
 						return { type: "audio" as const, preview: null }

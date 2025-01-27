@@ -2,6 +2,7 @@
 
 import { useEffect } from "react"
 import { Button } from "@/components/ui/button"
+import { SafeLog } from "@/utils/SafeLog"
 
 export default function DashboardError({
 	error,
@@ -11,7 +12,7 @@ export default function DashboardError({
 	reset: () => void
 }) {
 	useEffect(() => {
-		console.error(error)
+		SafeLog({ display: false, log: { "Dashboard error": error } })
 	}, [error])
 
 	return (

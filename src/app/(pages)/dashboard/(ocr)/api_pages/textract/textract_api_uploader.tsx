@@ -39,6 +39,7 @@ import { uspsQueries } from "@/queries/usps-queries"
 import { dosQueries } from "@/queries/dos-queries"
 import { usaidQueries } from "@/queries/usaid-queries"
 import { irsQueries } from "@/queries/irs-queries"
+import { SafeLog } from "@/utils/SafeLog"
 
 const formSchema = z.object({
 	agency: z.string({
@@ -140,9 +141,9 @@ const TextractUploader = () => {
 	}
 	const onSubmit = async (data: FormValues) => {
 		try {
-			if (!data.file) return // Early return if no file
+			if (!data.file) return
 			setLoadingState("loading")
-			console.log("Uploading file:", data.file)
+			SafeLog({ display: false, log: { "Uploading file": data.file } })
 
 			// Get the selected agency's queries
 			const agencyQueries = getAgencyQueries(data.agency)
@@ -159,7 +160,10 @@ const TextractUploader = () => {
 				)
 				.map((q) => q.Text)
 
-			console.log("Query texts to process:", queryTexts) // Debug log
+			SafeLog({
+				display: false,
+				log: { "Query texts to process": queryTexts },
+			})
 
 			let fetches = 0
 			let responses = []
@@ -168,7 +172,10 @@ const TextractUploader = () => {
 			// Process queries in batches of 15
 			for (let i = 0; i < queryTexts.length; i += 15) {
 				const batchQueries = queryTexts.slice(i, i + 15)
-				console.log(`Processing batch ${i / 15 + 1}:`, batchQueries) // Debug log
+				SafeLog({
+					display: false,
+					log: { [`Processing batch ${i / 15 + 1}`]: batchQueries },
+				})
 
 				const formData = new FormData()
 				// convert the file to base64 if it is a pdf, and append it to the form data
@@ -201,11 +208,16 @@ const TextractUploader = () => {
 					).length
 					undefinedCount += undefinedQueries
 
-					console.log({
-						fetchNumber: fetches,
-						queriesProcessed: result.queriesProcessed,
-						undefinedValues: undefinedQueries,
-						data: queries,
+					SafeLog({
+						display: false,
+						log: {
+							"Batch Results": {
+								fetchNumber: fetches,
+								queriesProcessed: result.queriesProcessed,
+								undefinedValues: undefinedQueries,
+								data: queries,
+							},
+						},
 					})
 
 					responses.push(queries)
@@ -225,7 +237,10 @@ const TextractUploader = () => {
 			})
 			const unifiedResponse = await unifyResponse.json()
 
-			console.log("Unified Response:", unifiedResponse)
+			SafeLog({
+				display: false,
+				log: { "Unified Response": unifiedResponse },
+			})
 
 			// Transform unified response into form data
 			const formValues = (unifiedResponse.data || []).reduce(
@@ -250,14 +265,22 @@ const TextractUploader = () => {
 				{}
 			)
 
-			console.log("Form values to set:", formValues)
+			SafeLog({
+				display: false,
+				log: { "Form values to set": formValues },
+			})
 			setFormData(formValues)
 
-			console.log("SUMMARY", {
-				totalQueries: queryTexts.length,
-				totalFetches: fetches,
-				undefinedAmount: undefinedCount,
-				data: unifiedResponse.data,
+			SafeLog({
+				display: false,
+				log: {
+					Summary: {
+						totalQueries: queryTexts.length,
+						totalFetches: fetches,
+						undefinedAmount: undefinedCount,
+						data: unifiedResponse.data,
+					},
+				},
 			})
 
 			setLoadingState("populating form")
@@ -273,14 +296,13 @@ const TextractUploader = () => {
 				setLoadingState("idle")
 			}, 3000)
 		} catch (error) {
-			console.error("Error uploading file:", error)
+			SafeLog({ display: false, log: { "Error uploading file": error } })
 			setLoadingState("idle")
 		}
 	}
 
 	const handleFormSubmit = (data: any) => {
-		console.log("Form submitted with data:", data)
-		// Handle form submission
+		SafeLog({ display: false, log: { "Form submitted with data": data } })
 	}
 
 	const getStatusMessage = () => {

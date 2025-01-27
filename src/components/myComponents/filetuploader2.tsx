@@ -26,6 +26,7 @@ import { useDropzone, DropzoneOptions, FileRejection } from "react-dropzone"
 import { X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { parseBlob } from "music-metadata-browser"
+import { SafeLog } from "@/utils/SafeLog"
 
 export interface FileUploaderProps {
 	onFilesAdded?: (files: File[]) => void
@@ -205,7 +206,10 @@ async function extractAlbumArt(
 
 		return canvas.toDataURL()
 	} catch (error) {
-		console.error("Error extracting album art:", error)
+		SafeLog({
+			display: false,
+			log: { "Error extracting album art": error },
+		})
 		return null
 	}
 }

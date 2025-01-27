@@ -1,6 +1,7 @@
 import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 import { env } from "@/env"
+import { SafeLog } from "@/utils/SafeLog"
 
 const ADMIN_EMAIL = env.ADMIN_EMAIL
 const ADMIN_PASSWORD = env.ADMIN_PASSWORD
@@ -30,9 +31,9 @@ export async function POST(request: Request) {
 
 		return response
 	} catch (error) {
-		console.error("Sign-in error:", error)
+		SafeLog({ display: false, log: { "Sign-in error": error } })
 		return NextResponse.json(
-			{ error: "Internal server error" },
+			{ error: "Failed to sign in" },
 			{ status: 500 }
 		)
 	}

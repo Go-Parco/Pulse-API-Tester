@@ -5,6 +5,7 @@ import { UploadForm } from "./UploadForm"
 import { useDocumentUploadThingUpload } from "@/hooks/useDocumentUploadThingUpload"
 import { defaultChunks } from "@/types/chunks"
 import { useRouter } from "next/navigation"
+import { SafeLog } from "@/utils/SafeLog"
 
 export default function ExtractPage() {
 	const router = useRouter()
@@ -38,16 +39,24 @@ export default function ExtractPage() {
 
 	useEffect(() => {
 		if (extractedData) {
-			console.log("Extracted Data Updated:", {
-				hasSchema: !!extractedData.schema,
-				schema: extractedData.schema,
-				fullData: extractedData,
+			SafeLog({
+				display: false,
+				log: {
+					"Extracted Data Updated": {
+						hasSchema: !!extractedData.schema,
+						schema: extractedData.schema,
+						fullData: extractedData,
+					},
+				},
 			})
 		}
 	}, [extractedData])
 
 	useEffect(() => {
-		console.log("Extracted Data Updated:", extractedData)
+		SafeLog({
+			display: false,
+			log: { "Extracted Data Updated": extractedData },
+		})
 	}, [extractedData])
 
 	return (

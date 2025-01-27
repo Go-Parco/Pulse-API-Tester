@@ -2,6 +2,7 @@
 
 import { useEffect } from "react"
 import { Button } from "@/components/ui/button"
+import { SafeLog } from "@/utils/SafeLog"
 
 export default function RootError({
 	error,
@@ -11,7 +12,7 @@ export default function RootError({
 	reset: () => void
 }) {
 	useEffect(() => {
-		console.error(error)
+		SafeLog({ display: false, log: { "Root error": error } })
 	}, [error])
 
 	return (

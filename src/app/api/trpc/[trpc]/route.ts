@@ -2,6 +2,7 @@ import { fetchRequestHandler } from "@trpc/server/adapters/fetch"
 import { appRouter } from "@/server/api/root"
 import { createContext } from "@/server/context"
 import { env } from "@/env"
+import { SafeLog } from "@/utils/SafeLog"
 
 const handler = (req: Request) =>
 	fetchRequestHandler({
@@ -16,11 +17,15 @@ const handler = (req: Request) =>
 		onError:
 			env.NEXT_PUBLIC_NODE_ENV === "development"
 				? ({ path, error }) => {
-						console.error(
-							`❌ tRPC failed on ${path ?? "<no-path>"}: ${
-								error.message
-							}`
-						)
+						SafeLog({
+							display: false,
+							log: {
+								"TRPC Error": {
+									path: path ?? "<no-path>",
+									message: error.message,
+								},
+							},
+						})
 				  }
 				: undefined,
 	})

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { SafeLog } from "@/utils/SafeLog"
 import { PULSE_API_URL } from "../config"
 import type { PulseExtractResponse } from "../config"
 import { env } from "@/env"
@@ -26,7 +27,7 @@ export async function GET(request: Request) {
 		})
 
 		const data = await response.json()
-		console.log("Raw Poll Response:", data)
+		SafeLog({ display: false, log: { "Raw Poll Response": data } })
 
 		// If there's an error about calculate_job_progress, ignore it and continue
 		if (!response.ok && !data.error?.includes("calculate_job_progress")) {
@@ -37,14 +38,20 @@ export async function GET(request: Request) {
 
 		// If we have a completed status and result, transform the result
 		if (data.status === "completed" && data.result) {
-			console.log(
-				"Raw Poll Response Data:",
-				JSON.stringify(data.result, null, 2)
-			)
+			SafeLog({
+				display: false,
+				log: {
+					"Raw Poll Response Data": JSON.stringify(
+						data.result,
+						null,
+						2
+					),
+				},
+			})
 
 			// Extract schema data from the result
 			const schemaData = data.result["schema-json"] || {}
-			console.log("Schema Data:", schemaData)
+			SafeLog({ display: false, log: { "Schema Data": schemaData } })
 
 			const result: PulseExtractResponse = {
 				text: data.result.markdown || data.result.text,
@@ -65,7 +72,7 @@ export async function GET(request: Request) {
 				},
 			}
 
-			console.log("Transformed Response:", result)
+			SafeLog({ display: false, log: { "Transformed Response": result } })
 
 			return NextResponse.json({
 				status: data.status,
@@ -80,7 +87,7 @@ export async function GET(request: Request) {
 			progress: data.progress || 0,
 		})
 	} catch (error: any) {
-		console.error("Poll error:", error)
+		SafeLog({ display: false, log: { "Poll error": error } })
 		return NextResponse.json(
 			{
 				error: error.message || "Failed to poll job status",

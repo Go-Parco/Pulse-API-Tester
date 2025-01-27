@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
+import { SafeLog } from "@/utils/SafeLog"
 
 export default function GlobalError({
 	error,
@@ -10,8 +11,7 @@ export default function GlobalError({
 	reset: () => void
 }) {
 	useEffect(() => {
-		// Log the error to an error reporting service
-		console.error(error)
+		SafeLog({ display: false, log: { "Global error": error } })
 	}, [error])
 
 	return (

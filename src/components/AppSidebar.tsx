@@ -48,6 +48,7 @@ import {
 import { useState, useEffect } from "react"
 import { LucideIcon } from "lucide-react"
 import Link from "next/link"
+import { SafeLog } from "@/utils/SafeLog"
 
 type MenuItem = {
 	title: string
@@ -262,7 +263,7 @@ export function AppSidebar() {
 
 			router.push("/sign-in")
 		} catch (error) {
-			console.error("Sign out error:", error)
+			SafeLog({ display: false, log: { "Sign out error": error } })
 		}
 	}
 
