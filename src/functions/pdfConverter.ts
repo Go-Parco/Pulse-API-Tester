@@ -1,23 +1,35 @@
 import { getDocument } from "@/lib/pdfWorker"
 import JSZip from "jszip"
-import { saveAs } from "file-saver"
 
 // Helper to wrap FileReader in a Promise
 // can be placed at 'src/lib/utils'
-const readFileAsArrayBuffer = (file: File): Promise<ArrayBuffer> => {
+const readFileAsArrayBuffer = (file: File | Blob): Promise<ArrayBuffer> => {
 	return new Promise((resolve, reject) => {
+		if (!(file instanceof Blob)) {
+			reject(new Error("Invalid file type: not a Blob or File"))
+			return
+		}
 		const reader = new FileReader()
 		reader.onload = () => resolve(reader.result as ArrayBuffer)
-		reader.onerror = (error) => reject(error)
+		reader.onerror = reject
 		reader.readAsArrayBuffer(file)
 	})
 }
 
-export async function pdfToImages(pdfFile: File, extractPage?: number[]) {
-	if (!pdfFile) throw new Error("PDF file not provided")
+export const pdfConverter = async ({
+	file,
+	extractPage,
+}: {
+	file?: File | null
+	extractPage?: number[]
+}): Promise<Blob | null> => {
+	if (!file) {
+		throw new Error("No file provided")
+	}
 
 	try {
-		const pdfData = new Uint8Array(await readFileAsArrayBuffer(pdfFile))
+		const arrayBuffer = await readFileAsArrayBuffer(file)
+		const pdfData = new Uint8Array(arrayBuffer)
 		const pdf = await getDocument({ data: pdfData }).promise
 
 		const images: { page: number; src: string }[] = []
@@ -37,7 +49,7 @@ export async function pdfToImages(pdfFile: File, extractPage?: number[]) {
 
 			const canvas = document.createElement("canvas")
 			const ctx = canvas.getContext("2d")
-			if (!ctx) return
+			if (!ctx) return null
 
 			canvas.width = viewport.width
 			canvas.height = viewport.height
@@ -57,14 +69,10 @@ export async function pdfToImages(pdfFile: File, extractPage?: number[]) {
 				zip.file(`page-${page}.jpg`, imgData, { base64: true })
 			})
 
-			zip.generateAsync({ type: "blob" }).then((content) => {
-				saveAs(content, "pdf-pages.zip")
-			})
-
-			return
+			return zip.generateAsync({ type: "blob" })
 		}
 
-		// If only one image, download it directly
+		// If only one image, return it directly
 		const imgData = images[0].src.split(",")[1] // Get base64 part
 		const page = images[0].page
 		const byteCharacters = atob(imgData)
@@ -80,9 +88,10 @@ export async function pdfToImages(pdfFile: File, extractPage?: number[]) {
 		}
 
 		const blob = new Blob(byteArrays, { type: "image/jpeg" })
-		saveAs(blob, `page-${page}.jpg`)
+		return blob
+		// saveAs(blob, `page-${page}.jpg`);
 	} catch (error) {
-		console.error("Error processing PDF file", error)
-		throw new Error("An error occurred while processing the PDF file.")
+		console.error("Error processing PDF:", error)
+		throw error
 	}
 }

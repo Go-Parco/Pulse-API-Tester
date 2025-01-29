@@ -41,6 +41,8 @@ import { Step, StepState } from "@/components/StepIndicator"
 import { SafeLog } from "@/utils/SafeLog"
 const { useUploadThing: useUploadThingCore } =
 	generateReactHelpers<OurFileRouter>()
+import { pdfPageCount } from "@/functions/pdfPageCount"
+import { pdfConverter } from "@/functions/pdfConverter"
 
 const DEFAULT_FILE_URL =
 	"https://2jestdr1ib.ufs.sh/f/FLqidTvfTRqGOCArCLoYgZ07GhMxwrEV68PNnofWH3sFDyBJ"
@@ -145,9 +147,11 @@ export default function DocumentRenamePage() {
 			},
 		})
 
+		// Check if the file type is a pdf and if so use the PDF converter to convert the file to an image.
+
 		try {
 			const uploadResponse = await startUpload([file])
-			const uploadResult = uploadResponse?.[0]
+			const uploadResult = uploadResponse?.[0] // only the first file
 			const url = uploadResult?.url
 			SafeLog({
 				display: false,
@@ -242,12 +246,41 @@ export default function DocumentRenamePage() {
 				completedStepIds: [],
 			})
 
-			const url = await getDocumentUrl(data)
+			let finalFile = null
+
+			// Check if it's a PDF and convert if needed
+			if (
+				data.type === "file" &&
+				Array.isArray(data.value) &&
+				data.value[0]
+			) {
+				const file = data.value[0]
+				if (file.type === "application/pdf") {
+					console.log("Converting PDF to image")
+					const convertedFile = await pdfConverter({
+						file: file,
+						extractPage: [1], // Only convert first page
+					})
+					if (convertedFile) {
+						finalFile = new File([convertedFile], "converted.jpg", {
+							type: "image/jpeg",
+						})
+					}
+				} else {
+					finalFile = file
+				}
+			}
+
+			// Use the converted file or original file for upload
+			const url = await getDocumentUrl(
+				finalFile ? { type: "file", value: [finalFile] } : data
+			)
+
 			if (!url) {
 				throw new Error("Failed to get document URL")
 			}
 
-			// Upload complete, move to identifying
+			// Now proceed with identification using the converted file
 			await setStepWithMinimumActiveTime("identifying", ["uploading"])
 			setSelectedFileUrl(url)
 			setIsProcessing(true)
@@ -779,7 +812,7 @@ only 2 file types that are accepted by the Nyckel API).
 
 			<FileSourceSelector
 				onSubmit={handleFileSubmit}
-				accept={[AcceptedFileType.IMAGE]}
+				accept={[AcceptedFileType.IMAGE, AcceptedFileType.PDF]}
 				onReset={handleReset}
 				defaultFileUrl={DEFAULT_FILE_URL}
 				disabledOptions="none"

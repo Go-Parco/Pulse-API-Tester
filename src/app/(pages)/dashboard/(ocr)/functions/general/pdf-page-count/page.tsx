@@ -20,7 +20,6 @@ import Link from "next/link"
 import { CodeExcerpt } from "@/components/myComponents/CodeExcerpt"
 import { AcceptedFileType } from "@/types/FileTypes"
 import FileSourceSelector from "@/components/myComponents/fileSourceSelector"
-import { pdfToImages } from "@/functions/pdfConverter"
 import { getDocument } from "@/lib/pdfWorker" // Import the helper with PDF.js setup
 import JSZip from "jszip"
 import { saveAs } from "file-saver"

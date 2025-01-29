@@ -2,6 +2,8 @@
 
 import { useState } from "react"
 import { SafeLog } from "@/utils/SafeLog"
+import { pdfPageCount } from "@/functions/pdfPageCount"
+import { pdfConverter } from "@/functions/pdfConverter"
 
 type DocNameFunnelProps = {
 	data: {
@@ -56,7 +58,7 @@ const AgencyLabelConversion: Record<
 	},
 	TVA: {
 		display: "TVA",
-		matches: ["tennessee valley authority"],
+		matches: ["tennessee valley authority", "Internal Payroll System"],
 	},
 	GSA: {
 		display: "GSA",
@@ -378,6 +380,8 @@ export const docNameFunnel = ({
 	if (
 		docType.toLowerCase() === "budget" ||
 		docType.toLowerCase() === "specification" ||
+		docType.toLowerCase() === "invoice" ||
+		docType.toLowerCase() === "payroll document" ||
 		docType.toLowerCase() === "pay statement" ||
 		docName.toLowerCase() === "pay information" ||
 		schemaData.document_kind.toLowerCase().includes("earnings") ||
