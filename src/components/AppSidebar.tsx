@@ -7,6 +7,8 @@ import {
 	ChevronUp,
 	CircleDollarSign,
 	Code,
+	FileImage,
+	FileText,
 	FileType,
 	FolderPen,
 	Home,
@@ -21,7 +23,9 @@ import {
 	Search,
 	Shovel,
 	Snail,
+	SquareFunction,
 	Table,
+	Tally5,
 	Text,
 } from "lucide-react"
 import {
@@ -178,6 +182,30 @@ const sectionGroups: SectionGroup[] = [
 						title: "Document Rename",
 						url: "/dashboard/functions/ocr/document-rename",
 						icon: FolderPen,
+					},
+				],
+			},
+			{
+				id: "gen-fctn-section",
+				title: "General Functions",
+				icon: SquareFunction,
+				iconBgColor: "bg-zinc-100",
+				iconColor: "text-zinc-600",
+				items: [
+					{
+						title: "PDF Page Count",
+						url: "/dashboard/functions/general/pdf-page-count",
+						icon: Tally5,
+					},
+					{
+						title: "PDF to Img",
+						url: "/dashboard/functions/general/pdf-to-img",
+						icon: FileText,
+					},
+					{
+						title: "Img to JPG",
+						url: "/dashboard/functions/general/img-to-jpg",
+						icon: FileImage,
 					},
 				],
 			},

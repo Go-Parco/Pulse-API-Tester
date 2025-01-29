@@ -3,7 +3,7 @@
 	"version": "0.1.0",
 	"private": true,
 	"scripts": {
-		"dev": "next dev --turbopack",
+		"dev": "next dev --turbo",
 		"build": "next build",
 		"start": "next start",
 		"lint": "next lint"
@@ -29,6 +29,7 @@
 		"@trpc/react-query": "11.0.0-rc.718",
 		"@trpc/server": "11.0.0-rc.718",
 		"@types/cookie": "^1.0.0",
+		"@types/file-saver": "^2.0.7",
 		"@types/pdfjs-dist": "^2.10.378",
 		"@uploadthing/react": "^7.1.5",
 		"aws-sdk": "^2.1692.0",
@@ -36,8 +37,11 @@
 		"clsx": "^2.1.1",
 		"cookie": "^1.0.2",
 		"dotenv": "^16.4.7",
+		"file-saver": "^2.0.5",
 		"fs": "0.0.1-security",
+		"heic2any": "^0.0.4",
 		"import-in-the-middle": "^1.12.0",
+		"jszip": "^3.10.1",
 		"lucia": "^3.2.2",
 		"lucide-react": "^0.471.1",
 		"music-metadata-browser": "^2.5.11",

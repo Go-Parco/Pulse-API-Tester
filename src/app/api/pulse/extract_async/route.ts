@@ -3,6 +3,7 @@ import { PULSE_API_URL } from "../config"
 import type { PulseConfig } from "../config"
 import { env } from "@/env"
 import { SafeLog } from "@/utils/SafeLog"
+import sharp from "sharp"
 
 // Define the default schema according to the API docs
 const DEFAULT_SCHEMA = {
@@ -23,11 +24,69 @@ export async function POST(request: Request) {
 			throw new Error("PULSE_API_KEY is not configured")
 		}
 
+		// Handle WebP conversion if needed
+		let finalFileUrl = fileUrl
+		if (fileUrl.toLowerCase().endsWith(".webp")) {
+			try {
+				// Download the WebP image
+				const imageResponse = await fetch(fileUrl)
+				if (!imageResponse.ok) {
+					throw new Error("Failed to fetch WebP image")
+				}
+				const imageBuffer = await imageResponse.arrayBuffer()
+
+				// Convert to JPG using sharp
+				const jpgBuffer = await sharp(Buffer.from(imageBuffer))
+					.jpeg({ quality: 90 })
+					.toBuffer()
+
+				// Create form data for upload
+				const formData = new FormData()
+				formData.append(
+					"file",
+					new Blob([jpgBuffer], { type: "image/jpeg" }),
+					"converted.jpg"
+				)
+
+				// Upload the converted image
+				const uploadResponse = await fetch(
+					`${process.env.NEXT_PUBLIC_APP_URL}/api/uploadthing`,
+					{
+						method: "POST",
+						body: formData,
+					}
+				)
+
+				if (!uploadResponse.ok) {
+					throw new Error("Failed to upload converted image")
+				}
+
+				const uploadData = await uploadResponse.json()
+				finalFileUrl = uploadData.url
+
+				SafeLog({
+					display: false,
+					log: {
+						"WebP conversion successful": {
+							originalUrl: fileUrl,
+							convertedUrl: finalFileUrl,
+						},
+					},
+				})
+			} catch (error) {
+				SafeLog({
+					display: false,
+					log: { "WebP conversion error": error },
+				})
+				throw new Error("Failed to convert WebP image")
+			}
+		}
+
 		// Convert schema to proper format if provided
 		const finalSchema = DEFAULT_SCHEMA
 
 		const requestBody = {
-			"file-url": fileUrl,
+			"file-url": finalFileUrl,
 			chunking: "semantic",
 			return_table: true,
 			schema: finalSchema,

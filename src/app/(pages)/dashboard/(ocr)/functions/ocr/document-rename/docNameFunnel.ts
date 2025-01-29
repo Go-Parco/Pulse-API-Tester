@@ -68,7 +68,11 @@ const AgencyLabelConversion: Record<
 	},
 	IRS: {
 		display: "IRS",
-		matches: ["internal revenue service", "irs ogden payroll"],
+		matches: [
+			"internal revenue service",
+			"irs ogden payroll",
+			"internal payroll system",
+		],
 	},
 	DOS: {
 		display: "DOS",
@@ -85,11 +89,18 @@ const AgencyLabelConversion: Record<
 }
 
 const BankLabelConversion = {
-	Charles_Schwab: { display: "Charles Schwab", matches: ["charles schwab"] },
+	Charles_Schwab: {
+		display: "Charles Schwab",
+		matches: ["charles schwab", "www.schwab.com"],
+	},
 	edward_Jones: { display: "Edward Jones", matches: ["edward jones"] },
 	Scudder_Investor_Relations: {
 		display: "Scudder",
-		matches: ["scudder investor relations"],
+		matches: [
+			"scudder investor relations",
+			"scudder",
+			"consolidated statement",
+		],
 	},
 }
 
@@ -256,7 +267,7 @@ const processInvoiceDocs = (
 		setDocType("Voided Check")
 		setDocName(
 			formatDocName(
-				"Voided_Check",
+				"Voided Check",
 				schemaData.document_comes_from,
 				extension
 			).name
@@ -265,24 +276,26 @@ const processInvoiceDocs = (
 		// Try to match the bank name
 		const bankMatch = Object.entries(BankLabelConversion).find(
 			([key, value]) => {
-				const sourceMatch =
-					schemaData.document_comes_from.toLowerCase() ===
-					value.display.toLowerCase()
-				const keyMatch = schemaData.document_comes_from
-					.toLowerCase()
-					.includes(key.toLowerCase().replace("_", " "))
-				SafeLog({
-					display: false,
-					log: {
-						"Bank Check": {
-							key,
-							value,
-							sourceMatch,
-							keyMatch,
+				const matchFound = value.matches.some((match) => {
+					const matchLower = match.toLowerCase()
+					const sourceText =
+						schemaData.document_comes_from.toLowerCase()
+					const sourceMatch = sourceText === matchLower
+					const sourceIncludes = sourceText.includes(matchLower)
+					SafeLog({
+						display: false,
+						log: {
+							"Bank Check": {
+								key,
+								match,
+								sourceMatch,
+								sourceIncludes,
+							},
 						},
-					},
+					})
+					return sourceMatch || sourceIncludes
 				})
-				return sourceMatch || keyMatch
+				return matchFound
 			}
 		)
 
@@ -296,7 +309,7 @@ const processInvoiceDocs = (
 			setDocProvider(display)
 			setDocType("Account Statement")
 			setDocName(
-				formatDocName("Account_Statement", display, extension).name
+				formatDocName("Account Statement", display, extension).name
 			)
 		} else {
 			setError({

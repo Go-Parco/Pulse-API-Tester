@@ -44,12 +44,41 @@ export const usdaQueries: (QueryWithNames | Query | CurrentLeaveBalance)[] = [
 	 *==================================================
 	 */
 	{
+		Marker: "",
+		Text: "What agency does this document come from?",
+		Alias: "What agency does this document come from?",
+		Name: "documentComesFrom",
+		Container: "",
+		Verified: true,
+		VerifiedOutput: "RURAL DEVELOPMENT",
+		PulseQuery: "document_comes_from",
+		Tests: [
+			{
+				testString: "\bd{2}/d{2}/d{4} d{2}/d{2}/d{4}\b",
+				ocr: "Pulse",
+				status: "success",
+			},
+		],
+	},
+	{
 		Marker: "name of this document",
 		Text: "What is the name of this document?",
 		Alias: "docName",
 		Name: "docName",
 		Container: "basic",
 		Verified: true,
+		VerifiedOutput: "Statement of EARNINGS AND LEAVE",
+		PulseQuery: "document_name",
+	},
+	{
+		Marker: "",
+		Text: "",
+		Alias: "",
+		Name: "",
+		Container: "",
+		Verified: true,
+		VerifiedOutput: "STATEMENT OF EARNINGS AND LEAVE",
+		PulseQuery: "What kind of document is this?",
 	},
 	{
 		Marker: "SCD FOR LEAVE",
@@ -58,6 +87,7 @@ export const usdaQueries: (QueryWithNames | Query | CurrentLeaveBalance)[] = [
 		Name: "dateOfHire",
 		Container: "basic",
 		Verified: true,
+		VerifiedOutput: "01/11/2015",
 	},
 	{
 		Marker: "SALARY",
